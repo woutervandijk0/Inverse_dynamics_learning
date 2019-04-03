@@ -1,3 +1,4 @@
-
+*.slxc
 *.asv
 /Test_models/Two_link_pendulum/slprj/*
+/slprj/*
