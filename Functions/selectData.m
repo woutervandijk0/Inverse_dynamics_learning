@@ -39,6 +39,7 @@ expectedDatasetNames = {'Default',...
                         'TFlex1D.mat',...
                         'TFlex1D5G.mat',...
                         'TFlex1D-2.mat',...
+                        'TFlexADRC_RN20.mat',...
                         };
 
 p = inputParser;
@@ -117,7 +118,7 @@ switch filename
         t = [1:length(X)]*ts;
         xlabelStr = 'time (s)';
         
-    case {'TFlex1D.mat','TFlex1D-2.mat','TFlex1D5G.mat'}
+    case {'TFlex1D.mat','TFlex1D-2.mat','TFlex1D5G.mat','TFlexADRC_RN20.mat'}
         Ninput = 1;
         Ntarget = 1;
         load(datasetPath);
@@ -130,7 +131,7 @@ N = [Ninput Ntarget];
 %% Plot
 if p.Results.fig == true
     if figNum ~= 0
-       figure(figNum);
+       figure(figNum),clf(figNum);
     else
        figure; 
     end

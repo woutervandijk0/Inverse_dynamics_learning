@@ -5,7 +5,7 @@ function [errorMeasure] = errorMeasure(goal,est,varargin)
 % Input arguments:  'goal'   - vector/matrix containing true data
 %                   'est'    - vector/matrix containing estimated data
 %                   'method' - (string) defines the error measure. Default
-%                              is NMSE (others: MAE)
+%                              is NMSE (others: MAE, MSE, RMSE)
 %                   'show'   - show the error measure in command window
 %
 % Output arguments: 'errorMeasure' - scalar/vector containing the error
@@ -22,6 +22,8 @@ defaultFig      = false;
 defaultMethod   = 'NMSE';
 expectedMethods = {'NMSE',...
                    'MAE',...
+                   'MSE',...
+                   'RMSE',...
                    };
 p = inputParser;
 addRequired(p,'goal',@(x) size(size(x),2)<3);
@@ -56,6 +58,12 @@ switch method
         errorMeasure = sum((goal-est).^2)./(mean(goal).*mean(est))/L;
     case 'MAE'      % Mean Absolute Error
         errorMeasure = sum(abs(goal-est))/L;
+        method = 'MAE ';
+    case 'MSE'
+        errorMeasure = sum((goal-est).^2)/L;
+        method = 'MSE ';
+    case 'RMSE'
+        errorMeasure = sqrt(sum((goal-est).^2)/L);
 end
 %% Print result
 if p.Results.show == true
