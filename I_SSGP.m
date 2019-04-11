@@ -4,9 +4,7 @@ close all, clear all
 dataID = 'TFlex1D-2.mat';
 %dataID = 'TFlex1D5G.mat';
 dataID = 'TFlexADRC_RN20.mat';
-%dataID = 'BaxterRand.mat';
-%dataID = 'DoublePendulum.mat'
-
+dataID = 'DoublePendulum.mat'
 
 %% Settings 
 param_update   =  false;  % Update hyperparameters in the loop (true/false)
@@ -16,16 +14,19 @@ loadParams     =  true;   % Load hyper parameters from previous run
 saveParams     =  true;   %
 manualParams   =  false;  % Manualy set hyperparams
 fromScratch    =  true;  % Start with clean sheet
-onlyPredict    =  1e4;   % Only predict after the nth iteration
+onlyPredict    =  1e9;   % Only predict after the nth iteration
 
-
-D = 150;    % Number of random features
+D = 100;    % Number of random features
 Z = 500;    % Size of floating frame
-maxIter    = 2e4;  % Max number of iterations
-trainIter  = 1;    % Number of Posterior updates per new sample
-numDescent = 2;    % Number of fmincon iterations
+maxIter    = 1e4;   % Max number of iterations
+trainIter  = 1;     % Number of Posterior updates per new sample
+trainSteps = 10;
+numDescent = 5;     % Number of fmincon iterations
+resamp = 1;
+
 %Learning Rates:
-alpha = 1;      %Update
+alpha = 1;      % Update posterior
+beta  = 0.5;      % Hyperparameters
 kappa = 1;      % Prediction
 
 %% Load dataset & Normalize 
@@ -54,10 +55,12 @@ sig_Y = std(Y);
 Y = (Y - mu_Y) ./ sig_Y;
 %Y = movmean(Y,30);
 
-% X = X(30000:end,:);
-% Xsp = Xsp(30000:end,:);
-% Y = Y(30000:end,:);
-
+%
+t_learn = 30;
+X = X(t_learn/ts:end,:);
+Y = Y(t_learn/ts:end,:);
+Xsp = Xsp(t_learn/ts:end,:);
+%}
 %% Hyperparam optimization settings
 options = optimset();
 options.Display = 'none';
@@ -72,9 +75,10 @@ options.MaxIter = numDescent;
 %% Hyperparameters (default unit)
 % Likelihood
 sn      =   ones(Q,1);       % Std of likelihood function
+sn      =   ones(Q,1)*1;
 % Covariance
-sf      =   ones(Q,1);        % Std covariance (at t=0, 1)
-ell     =   ones(Q,n);       % Length scales (at t=0, 1)
+sf      =   ones(Q,1)*0.01;        % Std covariance (at t=0, 1)
+ell     =   ones(Q,n)*0.01;       % Length scales (at t=0, 1)
 
 if loadParams == true
         [sn, sf, ell] = loadHyperparams(dataID,false);
@@ -87,17 +91,17 @@ end
 if manualParams == true
     switch (dataID)
         case 'TFlex1D5G.mat'
-            sn  = 1.9677;
-            sf  = 5.0000;
-            ell = [-1.0349    0.0516    9.8040];
+            sf  = 1.844;
+            sn  = 5.0000;
+            ell = [1.192    0.1891    0.3826];
         case 'TFlex1D-2.mat'
             sn  = 2.1108;
             sf  = 5.5283;
             ell = [-9    0.0516    9.8040];
         case 'TFlexADRC_RN20.mat'
-            sn = 1.9566;
-            sf = 2.2164;
-            ell = [0.0560    0.0329    0.3272];
+            sn = 2;
+            sf = 1.9831;
+            ell = [0.3994    0.1347    0.6647];
     end
     disp('Hyperparameters overwritten with: ')
     disp(['ell: ',num2str(ell(1,:))])
@@ -164,12 +168,12 @@ for ii = Z:numIter
         s2(iter)   = sn2(i).*(1+dot(v(:,i),v(:,i)));
         
         % Hyperparameter optimization
-        if param_update == true && iter >= 1
-            y    = Y((ii-Z+1):ii,1);
+        if param_update == true && iter >= 1 && mod(iter,trainSteps) == 0
+            y    = Y((ii-Z+1):ii,i);
             x    = X((ii-Z+1):ii,1:n);
             hyp_opt = hyp(i,:);
-            [hyp(i,1:end) nlml(iter)] = fminsearch(@(hyp_opt) calcNLML(hyp_opt,sn2(i),x,y,Z,D,RAND,n),hyp_opt,options);
-            
+            [hyp(i,:) nlml(iter)] = fminsearch(@(hyp_opt) calcNLML(hyp_opt,sn2(i),x,y,Z,D,RAND,n),hyp_opt,options);
+            hyp(i,:) = (1-beta).*hyp_opt + beta.*hyp(i,:);
             HYP(i,iter,:) = hyp(i,1:n+1);     %Store current hyperparams
             sf(i)    = hyp(i,end);
             SIGMA(i,1:D,1:n) = RAND.*hyp(i,1:n);
@@ -210,21 +214,23 @@ t        = i_plot*ts;
 % Hyperparams
 if param_update == true
     figure(555),clf(555)
-    hold on
     fm = 4/5;
     for i = 1:Q
         subplot(1,Q,i);
         %sn_vec(ii) = HYP(ii).hyp.lik;
-        hyp = squeeze(HYP(i,:,:));
-        plot(t,hyp(i_plot,:),'LineWidth',1.5);
+        hyp_v = squeeze(HYP(i,:,:));
+        hyp_v(find(hyp_v==0)) = [];
+        hyp_v = reshape(hyp_v,[length(hyp_v)/(n+1),n+1]);
         hold on
-        hyp_mean(i,:) = mean(hyp(round(length(hyp)*fm):end,:));
+        plot(t(1:trainSteps:end),hyp_v,'LineWidth',1.5);
+        hyp_mean(i,:) = mean(hyp_v(round(length(hyp_v)*fm):end,:));
         plot(t([1,end]),[hyp_mean(i,:); hyp_mean(i,:)],'--k');
         hold off
-        xlabel('[s]');
+        xlabel('time (s)');
         legend('$l_1$ $(\theta)$','$l_2$ $(\dot{\theta})$','$l_3$ $(\ddot{\theta})$','$\sigma_s$','Interpreter','Latex');
+        set(gcf,'Color','w')
+        title('Hyperparameters')
     end
-    hold off
     
     %Store hyperparams in .mat file
     if saveParams == true
@@ -274,7 +280,7 @@ for i = 1:Q
     
     ax74 = subplot(6,1,4:6);
     hold on
-    plot(t,Y(i_plot-1,i)','k','LineWidth',1.5);             % Measured signal
+    plot(t,Y(i_plot,i)','k','LineWidth',1.5);               % Measured signal
     plot(t,muPred(i_plot-Z+1,i)','--b','LineWidth',1.5);    % Predictions from measurements
     plot(t,muPredSp(i_plot-Z+1,i)',':r','LineWidth',1.5);   % Predictions from setpoint
     %Plot variances
@@ -285,10 +291,10 @@ for i = 1:Q
     
     %Plot switch
     if onlyPredict < numIter
-        plot([onlyPredict onlyPredict]*ts, [-1000 2000],':k','LineWidth',1.5)
+        plot([onlyPredict onlyPredict]*ts, [min(Y(i_plot-1,i)) max(Y(i_plot-1,i))],':k','LineWidth',1.5)
     end
     
-    legend('Measured','\sigma_{predict}','\mu_{setpoint}','\sigma_{measure}','\sigma_{setpoint}')
+    legend('Measured','\mu_{measure}','\mu_{setpoint}','\sigma_{measure}','\sigma_{setpoint}');
     xlabel('time (s)')
     ylabel('Current (mA)')
     hold off
@@ -310,10 +316,11 @@ end
 i_end  = round((t(end)/2)/ts);
 iEnd   = length(muPred);
 iStart = iEnd-i_end;
+shift = -1;
 t_c  = t(iStart:iEnd);
-Y_m  = Y(iStart+Z-2:iEnd+Z-2,:);
-X_m  = X(iStart+Z-2:iEnd+Z-2,1);
-X_sp = Xsp(iStart+Z-2:iEnd+Z-2,1);
+Y_m  =   Y(iStart+Z+shift:iEnd+Z+shift,:);
+X_m  =   X(iStart+Z+shift:iEnd+Z+shift,1);
+X_sp = Xsp(iStart+Z+shift:iEnd+Z+shift,1);
 %From measured data:
 Y_p  = muPred(iStart:iEnd,:); 
 s2_p = s2(iStart:iEnd,:);
@@ -324,15 +331,15 @@ s2_psp = s2(iStart:iEnd,:);
 disp(' ');
 disp(['t+1 predictions (from measurements):']);
 NMSE = errorMeasure(Y_m,Y_p,'method','NMSE','show',true);
-MAE = errorMeasure(Y_m,Y_p,'method','MAE','show',true);
-MSE = errorMeasure(Y_m,Y_p,'method','MSE','show',true);
+%MAE = errorMeasure(Y_m,Y_p,'method','MAE','show',true);
+%MSE = errorMeasure(Y_m,Y_p,'method','MSE','show',true);
 RMSE = errorMeasure(Y_m,Y_p,'method','RMSE','show',true);
 
 disp(' ');
 disp(['t+1 predictions (from setpoint):']);
 NMSE = errorMeasure(Y_m,Y_psp,'method','NMSE','show',true);
-MAE = errorMeasure(Y_m,Y_psp,'method','MAE','show',true);
-MSE = errorMeasure(Y_m,Y_psp,'method','MSE','show',true);
+%MAE = errorMeasure(Y_m,Y_psp,'method','MAE','show',true);
+%MSE = errorMeasure(Y_m,Y_psp,'method','MSE','show',true);
 RMSE = errorMeasure(Y_m,Y_psp,'method','RMSE','show',true);
 
 figure(111),clf(111);
@@ -340,7 +347,7 @@ plot(t_c,Y_m','k')
 hold on
 plot(t_c,Y_p','--b')
 plot(t_c,Y_psp',':r')
-legend('Measured','pred. w. Meas.','pred. w. Set.')
+legend('Measured','pred. w. Meas.','pred. w. Set.');
 xlabel('time (s)'); ylabel('Current (mA)')
 title(['1-step ahead predictions    (',num2str(dataID),')'])
 set(gcf,'Color','White')
@@ -364,8 +371,34 @@ title('Displacement vs Current (measured)')
 linkaxes([sp1,sp2],'xy')
 
 %%
+%{
+figure
+ax1 = subplot(2,1,1);
+hold on
+plot(t,Y(i_plot,i)','k','LineWidth',1.5);               % Measured signal
+plot(t,muPred(i_plot-Z+1,i)','--b','LineWidth',1.5);    % Predictions from measurements
+plot(t,muPredSp(i_plot-Z+1,i)',':r','LineWidth',1.5);   % Predictions from setpoint
+%Plot switch
+if onlyPredict < numIter
+    plot([onlyPredict onlyPredict]*ts, [min(Y(i_plot-1,i)) max(Y(i_plot-1,i))],':k','LineWidth',1.5)
+end
+legend('Measured','\mu_{measure}','\mu_{setpoint}','\sigma_{measure}','\sigma_{setpoint}');
+xlabel('time (s)')
+ylabel('Current (mA)')
+hold off
 
-
+ax2 = subplot(2,1,2);
+hold on
+plot(t(1:trainSteps:end),hyp,'LineWidth',1.5);
+hyp_mean(i,:) = mean(hyp(round(length(hyp)*fm):end,:));
+plot(t([1,end]),[hyp_mean(i,:); hyp_mean(i,:)],'--k');
+hold off
+xlabel('time (s)');
+legend('$l_1$ $(\theta)$','$l_2$ $(\dot{\theta})$','$l_3$ $(\ddot{\theta})$','$\sigma_s$','Interpreter','Latex');
+set(gcf,'Color','w')
+hold off
+linkaxes([ax1,ax2],'x');
+%}
 
 %{
 
