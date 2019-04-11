@@ -5,17 +5,18 @@ model = 'Coupled_GP_fit';
 %% Simulink Parameters
 fs = 1000;      % [Hz] Sample rate
 ts = 1/fs;      % [s]  Sample time
-t_end     = 20;
-t_learn   = [0.01 t_end];   %[s] Switch for updating the posterior 
-t_predict = [0.01];
+t_end     = 30;
+t_learn   = [2 20 t_end];   %[s] Switch for updating the posterior 
+t_predict = [2];
 
 %% Online Sparse Gaussian Process regression
 Q  = 2;
-D  = 80;
+D  = 50;
 n  = 6;
-alpha = 1
+alpha = 1;
 
 sn = [9.2736;5.2731];
+sn = [1;1];
 %sn = [7;7];
 %sn = [5.2731;5.2731];
 
@@ -62,14 +63,14 @@ sf2 = sf(2);
 % Signal noise
 noise.signal.power(1) = 0.1;
 noise.signal.power(2) = 0.1;
-noise.signal.gain(1)  = 1e-8;
-noise.signal.gain(2)  = 1e-8;
+noise.signal.gain(1)  = 0;%1e-8;
+noise.signal.gain(2)  = 0;%1e-8;
 
 % Torque disturbance
 noise.torque.power(1) = 0.1;
 noise.torque.power(2) = 0.1;
-noise.torque.gain(1)  = 0;
-noise.torque.gain(2)  = 0;
+noise.torque.gain(1)  = 1;
+noise.torque.gain(2)  = 1;
 
 %Sample time;
 noise.sampleTime(1) = 1/10;
@@ -98,6 +99,10 @@ C_d2 = 0;
 %Damping
 C_k1 = 0;
 C_k2 = 0;
+
+%setpoint generator
+r = 1e3;
+h = 0.01;
 
 %% Feedback Controllers
 %First DoF
@@ -189,7 +194,7 @@ save('Data/InverseDynamics/DoublePendulumsp.mat','Xsp')
 
 %% plot results
 ist  = 1000;
-tOn1 = 5;
+tOn1 = t_learn;
 tOn2 = t_end;
 t1 = [tOn1 tOn1];
 t2 = [tOn2 tOn2];

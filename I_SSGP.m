@@ -2,23 +2,23 @@ close all, clear all
 
 %% Select and open Dataset ('Default' opens file explorer)
 dataID = 'TFlex1D-2.mat';
-%dataID = 'TFlex1D5G.mat';
-dataID = 'TFlexADRC_RN20.mat';
-dataID = 'DoublePendulum.mat'
+dataID = 'TFlex1D5G.mat';
+%dataID = 'TFlexADRC_RN20.mat';
+%dataID = 'DoublePendulum.mat'
 
 %% Settings 
 param_update   =  false;  % Update hyperparameters in the loop (true/false)
-loadSetpoint   =  true;   % 
+loadSetpoint   =  false;   % 
 compareWTrue   =  false;  % Compare with real data (only for periodic datasets)
 loadParams     =  true;   % Load hyper parameters from previous run
-saveParams     =  true;   %
+saveParams     =  false;   %
 manualParams   =  false;  % Manualy set hyperparams
 fromScratch    =  true;  % Start with clean sheet
 onlyPredict    =  1e9;   % Only predict after the nth iteration
 
-D = 100;    % Number of random features
-Z = 500;    % Size of floating frame
-maxIter    = 1e4;   % Max number of iterations
+D = 200;    % Number of random features
+Z = 200;    % Size of floating frame
+maxIter    = 5e4;   % Max number of iterations
 trainIter  = 1;     % Number of Posterior updates per new sample
 trainSteps = 10;
 numDescent = 5;     % Number of fmincon iterations
@@ -55,8 +55,8 @@ sig_Y = std(Y);
 Y = (Y - mu_Y) ./ sig_Y;
 %Y = movmean(Y,30);
 
-%
-t_learn = 30;
+%{
+t_learn = 2;
 X = X(t_learn/ts:end,:);
 Y = Y(t_learn/ts:end,:);
 Xsp = Xsp(t_learn/ts:end,:);
@@ -75,13 +75,13 @@ options.MaxIter = numDescent;
 %% Hyperparameters (default unit)
 % Likelihood
 sn      =   ones(Q,1);       % Std of likelihood function
-sn      =   ones(Q,1)*1;
+sn      =   ones(Q,1)*0.6;
 % Covariance
 sf      =   ones(Q,1)*0.01;        % Std covariance (at t=0, 1)
 ell     =   ones(Q,n)*0.01;       % Length scales (at t=0, 1)
 
 if loadParams == true
-        [sn, sf, ell] = loadHyperparams(dataID,false);
+        [~, sf, ell] = loadHyperparams(dataID,false);
 %        ell = ell'; sf = sf'; sn = sn'; %Use transpose
         disp([char(10),'Hyperparams loaded for: ',dataID]) 
         disp(['ell: ',num2str(ell(1,:))])
