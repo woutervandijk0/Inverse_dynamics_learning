@@ -4,30 +4,34 @@ close all, clear all
 dataID = 'TFlex1D-2.mat';
 dataID = 'TFlex1D5G.mat';
 %dataID = 'TFlexADRC_RN20.mat';
-%dataID = 'DoublePendulum.mat'
+dataID = 'DoublePendulumRand.mat'
+%dataID  = 'DoublePendulumRand1.mat'
 
 %% Settings 
-param_update   =  false;  % Update hyperparameters in the loop (true/false)
-loadSetpoint   =  false;   % 
+param_update   =  true;  % Update hyperparameters in the loop (true/false)
+loadSetpoint   =  true;   % 
 compareWTrue   =  false;  % Compare with real data (only for periodic datasets)
-loadParams     =  true;   % Load hyper parameters from previous run
-saveParams     =  false;   %
+loadParams     =  false;   % Load hyper parameters from previous run
+saveParams     =  true;   %
 manualParams   =  false;  % Manualy set hyperparams
 fromScratch    =  true;  % Start with clean sheet
 onlyPredict    =  1e9;   % Only predict after the nth iteration
 
-D = 200;    % Number of random features
-Z = 200;    % Size of floating frame
-maxIter    = 5e4;   % Max number of iterations
+D = 50;    % Number of random features
+Z = 2000;    % Size of floating frame
+Z_resamp   = 100;
+maxIter    = 10e4;   % Max number of iterations
 trainIter  = 1;     % Number of Posterior updates per new sample
-trainSteps = 10;
-numDescent = 5;     % Number of fmincon iterations
+trainSteps = 100;
+numDescent = 20;     % Number of fmincon iterations
 resamp = 1;
 
 %Learning Rates:
 alpha = 1;      % Update posterior
-beta  = 0.5;      % Hyperparameters
 kappa = 1;      % Prediction
+beta  = 1;      % Hyperparameters
+beta_min   = 0.001;
+beta_reduc = 0.9999
 
 %% Load dataset & Normalize 
 % Load
@@ -37,8 +41,8 @@ n = size(X,2);      % Number of inputs
 Q = size(Y,2);      % Number of latent functions
 
 % Normalize by limits of system;
-mu_X  = mean(X);
-sig_X = std(X);
+mu_X  = zeros(1,size(X,2));%mean(X);
+sig_X = ones(1,size(X,2)).*0.5% std(X);
 X = (X - mu_X) ./ sig_X;
 
 %Load setpoint
@@ -50,19 +54,19 @@ else
 end
 
 % Normalize
-mu_Y  = mean(Y);
-sig_Y = std(Y);
+mu_Y  = zeros(1,size(Y,2));%mean(Y);
+sig_Y = [50 15];%std(Y);
 Y = (Y - mu_Y) ./ sig_Y;
 %Y = movmean(Y,30);
 
-%{
-t_learn = 2;
+%
+t_learn = 50;
 X = X(t_learn/ts:end,:);
 Y = Y(t_learn/ts:end,:);
 Xsp = Xsp(t_learn/ts:end,:);
 %}
 %% Hyperparam optimization settings
-options = optimset();
+%options = optimset();
 options.Display = 'none';
 options.MaxIter = numDescent;
 %options.Hessian = 'off';
@@ -74,11 +78,10 @@ options.MaxIter = numDescent;
 
 %% Hyperparameters (default unit)
 % Likelihood
-sn      =   ones(Q,1);       % Std of likelihood function
-sn      =   ones(Q,1)*0.6;
+sn      =   ones(Q,1)*0.01;
 % Covariance
-sf      =   ones(Q,1)*0.01;        % Std covariance (at t=0, 1)
-ell     =   ones(Q,n)*0.01;       % Length scales (at t=0, 1)
+sf      =   ones(Q,1)*1;        % Std covariance (at t=0, 1)
+ell     =   ones(Q,n)*1;       % Length scales (at t=0, 1)
 
 if loadParams == true
         [~, sf, ell] = loadHyperparams(dataID,false);
@@ -88,28 +91,7 @@ if loadParams == true
         disp(['sf : ',num2str(sf(1:Q)')]);
         disp(['sn : ',num2str(sn(1:Q)'),char(10)]);
 end
-if manualParams == true
-    switch (dataID)
-        case 'TFlex1D5G.mat'
-            sf  = 1.844;
-            sn  = 5.0000;
-            ell = [1.192    0.1891    0.3826];
-        case 'TFlex1D-2.mat'
-            sn  = 2.1108;
-            sf  = 5.5283;
-            ell = [-9    0.0516    9.8040];
-        case 'TFlexADRC_RN20.mat'
-            sn = 2;
-            sf = 1.9831;
-            ell = [0.3994    0.1347    0.6647];
-    end
-    disp('Hyperparameters overwritten with: ')
-    disp(['ell: ',num2str(ell(1,:))])
-    disp(['sf : ',num2str(sf(1:Q)')]);
-    disp(['sn : ',num2str(sn(1:Q)'),char(10)]);
-end
 
-%sf = 5;
 %Combine to 1 vector;
 disp('Final hyperparameters: ')
 disp(['ell: ',num2str(ell(1,:))])
@@ -127,7 +109,7 @@ if fromScratch == true
     yhatSp   = zeros(numIter,Q);
     s2       = zeros(numIter,Q);
     s2Sp     = zeros(numIter,Q);
-    nlml     = zeros(numIter,1);
+    nlml     = zeros(numIter,Q);
     HYP      = zeros(Q,numIter,n+1);
     phi_x    = zeros(Z,Z);
     
@@ -146,6 +128,7 @@ if fromScratch == true
     sn2 = sn.^2;
 end
 iter = Z;
+iterHypOpti = 0;
 
 %Start loop
 tic;
@@ -169,14 +152,15 @@ for ii = Z:numIter
         
         % Hyperparameter optimization
         if param_update == true && iter >= 1 && mod(iter,trainSteps) == 0
-            y    = Y((ii-Z+1):ii,i);
-            x    = X((ii-Z+1):ii,1:n);
+            y    = Y((ii-Z+1):Z_resamp:ii,i);
+            x    = X((ii-Z+1):Z_resamp:ii,1:n);
             hyp_opt = hyp(i,:);
-            [hyp(i,:) nlml(iter)] = fminsearch(@(hyp_opt) calcNLML(hyp_opt,sn2(i),x,y,Z,D,RAND,n),hyp_opt,options);
+            [hyp(i,:) nlml(iter,i)] = fminsearch(@(hyp_opt) calcNLML(hyp_opt,sn2(i),x,y,Z,D,RAND,n),hyp_opt,options);
             hyp(i,:) = (1-beta).*hyp_opt + beta.*hyp(i,:);
             HYP(i,iter,:) = hyp(i,1:n+1);     %Store current hyperparams
             sf(i)    = hyp(i,end);
             SIGMA(i,1:D,1:n) = RAND.*hyp(i,1:n);
+            iterHypOpti = iterHypOpti+1;
         end
         if iter < onlyPredict
             %Update posterior
@@ -193,6 +177,8 @@ for ii = Z:numIter
         disp([num2str(round(ii/numIter*100)),' %'])
     end
     iter = iter+1;
+    beta = beta*beta_reduc;
+    beta = max(beta,beta_min);
 end
 toc;
 t_run = toc/(ii-Z);
@@ -221,14 +207,18 @@ if param_update == true
         hyp_v = squeeze(HYP(i,:,:));
         hyp_v(find(hyp_v==0)) = [];
         hyp_v = reshape(hyp_v,[length(hyp_v)/(n+1),n+1]);
+        nlml(find(nlml==0)) = [];
+        nlml = reshape(nlml,[length(nlml)/(Q),Q]);
+        
         hold on
         plot(t(1:trainSteps:end),hyp_v,'LineWidth',1.5);
         hyp_mean(i,:) = mean(hyp_v(round(length(hyp_v)*fm):end,:));
         plot(t([1,end]),[hyp_mean(i,:); hyp_mean(i,:)],'--k');
         hold off
         xlabel('time (s)');
-        legend('$l_1$ $(\theta)$','$l_2$ $(\dot{\theta})$','$l_3$ $(\ddot{\theta})$','$\sigma_s$','Interpreter','Latex');
-        set(gcf,'Color','w')
+        legend('$l_{1}$ $(\theta_1)$','$l_2$ $(\dot{\theta_1})$','$l_3$ $(\ddot{\theta_1})$',...
+            '$l_{1}$ $(\theta_1)$','$l_2$ $(\dot{\theta_1})$','$l_3$ $(\ddot{\theta_1})$',...
+            '$\sigma_s$','Interpreter','Latex');        set(gcf,'Color','w')
         title('Hyperparameters')
     end
     
