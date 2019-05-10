@@ -1,5 +1,7 @@
 *.slxc
 *.asv
 /Test_models/Two_link_pendulum/slprj/*
+/Test_models/TFlex_Simulation/slprj/*
 /slprj/*
 testCode.m
+/Results/hyperparamSettings/*
