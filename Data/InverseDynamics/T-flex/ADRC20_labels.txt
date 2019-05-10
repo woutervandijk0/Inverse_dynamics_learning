@@ -1,5 +1,0 @@
-1. measured angle
-2. sp current
-3. actual current
-5. noise (for standstill performance
-6. sp angle

@@ -54,9 +54,9 @@ parse(p,varargin{:});
 filename = p.Results.dataset;       %name of dataset
 figNum = p.Results.figNum;       %name of dataset
 %% Force user to select a dataset if not selected already
+datafolder = 'C:\Users\wout7\OneDrive - student.utwente.nl\ME - Master\Thesis\Data\';
 if strcmp(filename,defaultDatasetName)== 1
-    currentFolder = pwd;
-    [filename,path,indx] = uigetfile([currentFolder,'\Data\InverseDynamics\BaxterRand.mat'],...
+    [filename,path,indx] = uigetfile([datafolder,'InverseDynamics\BaxterRand.mat'],...
         'Select a Dataset');
     if isequal(filename,0)
         %disp('User selected Cancel')
@@ -67,8 +67,7 @@ if strcmp(filename,defaultDatasetName)== 1
 end
 
 %% Load the data
-currentFolder = pwd;
-datasetPath = [currentFolder,'\Data\InverseDynamics\',filename];
+datasetPath = [datafolder,'InverseDynamics\',filename];
 switch filename
     case {'BaxterRand.mat','BaxterRhythmic.mat'}
         load(datasetPath);
@@ -83,14 +82,14 @@ switch filename
         xlabelStr = 'time (s)';
         
     case {'sarcos_inv.mat','sarcos_inv_test.mat'}
-        datasetPath = [currentFolder,'\Data\InverseDynamics\','sarcos_inv.mat'];
+        datasetPath = [datafolder,'InverseDynamics\','sarcos_inv.mat'];
         load(datasetPath);
         Ninput = 7;
         Ntarget = 7;
         X_train = sarcos_inv(:,1:3*Ninput);
         Y_train = sarcos_inv(:,3*Ninput+1:end);
         
-        datasetPath = [currentFolder,'\Data\InverseDynamics\','sarcos_inv_test.mat'];
+        datasetPath = [datafolder,'InverseDynamics\','sarcos_inv_test.mat'];
         load(datasetPath);
         X_test = sarcos_inv_test(:,1:3*Ninput);
         Y_test = sarcos_inv_test(:,3*Ninput+1:end);
