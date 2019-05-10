@@ -1,7 +1,8 @@
 %%PID
 s = tf('s');
 P= 1/(0.2*s^2 + 0.2292*s+11.36); % model of the plant
-P= 1/(0.2*s^2 + 0.001*s+11.36); % model of the plant
+P= 1/(0.2*s^2 + 0.001*s+11.36); % model of 
+P= 1/(0.2*s^2 + 0.74*s+11.46); % model of the plantthe plant
 [Pnum,Pden] = tfdata(P,'v');
 
 Wc = 35*2*pi;%45*2*pi;
@@ -67,7 +68,7 @@ PID_bandwd=bandwidth(Loopd.Ti)
     legend('Sentivity function','Compl sens function','noise sens function')
     grid on
     hold on
-
+%{
 %% V3 - PID+
 s = tf('s');
 P= 1/(0.2*s^2 + 0.2292*s+11.36)*exp(-0.003*s); % model of the plant
@@ -132,3 +133,4 @@ Loopd = loopsens(Pd,Cpiddd);
     nyquist(Loopd.Si,Loopd.Ti,Pd*Loopd.Si)
     grid on
 PIDD_bandwd=bandwidth(Loopd.Ti)
+    %}

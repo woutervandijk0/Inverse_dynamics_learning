@@ -2,17 +2,17 @@ close all, clear all
 
 %% Select and open Dataset ('Default' opens file explorer)
 dataID = 'TFlex1D-2.mat';
-dataID = 'TFlex1D5G.mat';
-%dataID = 'TFlexADRC_RN20.mat';
-dataID = 'DoublePendulumRand.mat'
+%dataID = 'TFlex1D5G.mat';
+dataID = 'TFlexADRC_RN20.mat';
+%dataID = 'DoublePendulumRand.mat'
 %dataID  = 'DoublePendulumRand1.mat'
 
 %% Settings 
 param_update   =  true;  % Update hyperparameters in the loop (true/false)
 loadSetpoint   =  true;   % 
 compareWTrue   =  false;  % Compare with real data (only for periodic datasets)
-loadParams     =  false;   % Load hyper parameters from previous run
-saveParams     =  true;   %
+loadParams     =  true;   % Load hyper parameters from previous run
+saveParams     =  false;   %
 manualParams   =  false;  % Manualy set hyperparams
 fromScratch    =  true;  % Start with clean sheet
 onlyPredict    =  1e9;   % Only predict after the nth iteration
@@ -20,7 +20,7 @@ onlyPredict    =  1e9;   % Only predict after the nth iteration
 D = 50;    % Number of random features
 Z = 2000;    % Size of floating frame
 Z_resamp   = 100;
-maxIter    = 10e4;   % Max number of iterations
+maxIter    = 5e5;   % Max number of iterations
 trainIter  = 1;     % Number of Posterior updates per new sample
 trainSteps = 100;
 numDescent = 20;     % Number of fmincon iterations
@@ -56,6 +56,8 @@ end
 % Normalize
 mu_Y  = zeros(1,size(Y,2));%mean(Y);
 sig_Y = [50 15];%std(Y);
+mu_Y  = mean(Y);
+sig_Y = std(Y);
 Y = (Y - mu_Y) ./ sig_Y;
 %Y = movmean(Y,30);
 
@@ -78,7 +80,7 @@ options.MaxIter = numDescent;
 
 %% Hyperparameters (default unit)
 % Likelihood
-sn      =   ones(Q,1)*0.01;
+sn      =   ones(Q,1)*0.0603;
 % Covariance
 sf      =   ones(Q,1)*1;        % Std covariance (at t=0, 1)
 ell     =   ones(Q,n)*1;       % Length scales (at t=0, 1)

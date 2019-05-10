@@ -89,6 +89,7 @@ sn = [5.2731;5.2731];
 %sn  = [1;1]
 %sn  = [0.5;0.5]
 sn = [0.1;0.1]
+sn = [0.0244;0.0672];
 %sn = [0.01;0.01]
 
 %dataID = 'DoublePendulum.mat'
@@ -441,6 +442,12 @@ linkaxes([ha],'x')
 % set(figure(888),'Position',pos)
 % set(figure(150),'Position',pos)
 
+%% Noise calculation
+noiseSignal = torqueError;
+noiseSignal = noiseSignal./sig_Y;
+N = length(noiseSignal);
+sigma = sqrt(sum((noiseSignal-0).^2)/N);
+sigma = sqrt(sigma);
 
 %% Compare error 
 i_start = t_start/ts;
