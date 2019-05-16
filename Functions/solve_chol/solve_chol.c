@@ -46,5 +46,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   if (n == 0) return;             /* if argument was empty matrix, do no more */
   memcpy( C, mxGetPr(prhs[1]), m*n*mxGetElementSize(plhs[0]) );  /* copy data */
   dpotrs("U", &n, &m, mxGetPr(prhs[0]), &n, C, &n, &q);       /* solve system */
+  
   if (q < 0) mexErrMsgTxt("Error: illegal input to solve_chol");
 }
