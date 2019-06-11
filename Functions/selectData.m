@@ -15,6 +15,8 @@ function [X,Y,ts,N] = selectData(varargin)
 %                     Y:  Target data [Torque/Forces]
 %                     ts: Sample time of dataset
 %                     N:  [N_inputs N_targets]; Dimension of in- and outputs
+%                     figID:  
+%                     handle: subplot
 %
 % syntax:   selectData():                 
 %           selectData('dataset',string): 
@@ -130,41 +132,47 @@ end
 N = [Ninput Ntarget];
 
 %% Plot
+fSize = 13;
 if p.Results.fig == true
     if figNum ~= 0
-       figure(figNum),clf(figNum);
+       figID = figure(figNum); clf(figID);
     else
-       figure; 
+       figID = figure; 
     end
-    ha(1) = subplot(4,1,1);
+    handle(1,1) = subplot(4,1,1);
     hold on
     plot(t,X(:,1:Ninput));
     xlim([0 t(end)]);
-    title(['INPUT: Joint Position   (',filename,')'],'Interpreter','none');
+    %title('Random 20 deg','Interpreter','Latex','FontSize',fSize)
+    %title(filename,'Interpreter','Latex','FontSize',fSize);
+    ylabel('$(deg)$','Interpreter','Latex','FontSize',fSize)
+    %title(['INPUT: Joint Position   (',filename,')'],'Interpreter','none');
     hold off
     
-    ha(2) = subplot(4,1,2);
+    handle(2,1) = subplot(4,1,2);
     hold on
     plot(t,X(:,Ninput+1:2*Ninput));
     xlim([0 t(end)]);
-    title(['INPUT: Joint Velocity']);
+    ylabel('$(deg/s)$','Interpreter','Latex','FontSize',fSize)
+    %title(['INPUT: Joint Velocity']);
     hold off
     
-    ha(3) = subplot(4,1,3);
+    handle(3,1) = subplot(4,1,3);
     hold on
     plot(t,X(:,2*Ninput+1:3*Ninput));
     xlim([0 t(end)]);
-    title(['INPUT: Joint Acceleration']);
+    ylabel('$(deg/s^2)$','Interpreter','Latex','FontSize',fSize)
+    %title(['INPUT: Joint Acceleration']);
     hold off
     
-    ha(4) = subplot(4,1,4);
+    handle(4,1) = subplot(4,1,4);
     hold on
     plot(t,Y(:,1:Ntarget));
     xlim([0 t(end)]);
-    title(['OUTPUT: Joint Torque']);
-    xlabel(xlabelStr);
+    ylabel('$(mA)$','Interpreter','Latex','FontSize',fSize)
+    %title(['OUTPUT: Joint Torque']);
+    xlabel(xlabelStr,'Interpreter','Latex','FontSize',fSize);
     hold off
     
-    set(gcf,'Color','White');
-    linkaxes([ha(1:4)],'x');
+    [figID,handle] = subplots(figID,handle)
 end
