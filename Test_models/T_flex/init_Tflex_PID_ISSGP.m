@@ -17,36 +17,60 @@ fs = 1000;      % [Hz] Sample rate
 ts = 1/fs;      % [s]  Sample time
 t_switch  = 10; % [s]  Time interval over which the I-SSGP is turned on
 
-%% PID controller
-W_c = 35*2*pi;          % [rad/s] Cross over frequency
+%% PID
+I_limit = 2000; % [mA]   Current limit
+gainMotor = 5.56;  % [Nm/A] Motor constant
 
-alpha = 0.1;            %
-beta  = 10;             %
-m_eq  = 0.2;            % Equivalent mass
+crossOver = 35*2*pi;     %[rad/s]
+m_eq  = 0.2;     % Equivalent mass
+alpha = 0.119;   % Phase lead
+beta  = 2;       % Integral action
 
-kp    = m_eq*W_c^2/sqrt(1/alpha)
-tau_z = sqrt(1/alpha)/W_c
-tau_i = beta*tau_z
-tau_p = 1/(sqrt(1/alpha)*W_c)
+%Serial form
+kp    = m_eq*crossOver^2/sqrt(1/alpha);
+tau_z = sqrt(1/alpha)/crossOver;
+tau_i = beta*tau_z;
+tau_p = 1/(crossOver*sqrt(1/alpha));
 
-%% State variable filter
-W_n = 50*2*pi;  % [rad/s] Natural frequency
+%Parallel form
+Kp = kp*(1+(tau_z-tau_p)/tau_i);
+Ki = kp/tau_i;
+Kd = kp*(tau_z-tau_p*(1+(tau_z+tau_p)/tau_i));
 
-a0 = W_n^3;
-a1 = 3*W_n^2;
-a2 = 3*W_n;
+% Lowpass (for derivative action)
+LP = 1/(tau_p*s+1);         % Continuous
+LP_d = c2d(LP,ts);          % Discrete
+[LPnum,LPden] = tfdata(LP_d,'v');
 
-%% I-SSGP
+%% state variable filter (2nd Order)
+omega_n = 50*2*pi;  %[rad/s] Natural frequency
+% Coefficients
+a0 = omega_n^3;
+a1 = 3*omega_n^2;
+a2 = 3*omega_n;
+
+%Transfer function
+SVF   = 1/(s^3 + a2*s^2 + a1*s + a0);   % Continuous
+SVF_d = c2d(SVF,ts);                    % Discrete
+
+%Delay (at controller crossover)
+crossover = 35;
+[mag,phase,wout] = bode(SVF,crossover);
+svf_delay = -(phase)/(2*pi*wout);
+svf_delay = round(svf_delay/(ts*10));
+fprintf('\nDelay introduced by State Variable Filter: %i timesteps\n',svf_delay)
+
+%% I-SSGP 
 Q  = 1;         % [-] Number of latent functions
-D  = 20;        % [-] Number of features
+D  = 50;        % [-] Number of features
 n  = 3;         % [-] Input dimensions
 
 sn    = 1;       % Signal noise
 %Hyperparameters
 ell   = [-0.1564, 0.0772, -0.2425];
-ell   = [1,1,1];   % Length scales
+%ell   = [1,1,1];   % Length scales
 sf    = 0.5244;
-sf    = [1];       % 
+%sf    = [1];       % 
 hyp   = [ell,sf];  %Hyperparameters
 
 % Initialize matrices and vectors
@@ -65,11 +89,16 @@ mu_X  = [0,0,0];
 sig_X = [1,1,1];
 
 %% Setpoint Generator
-seed  = 1;      % Seed for Uniform Random Number
-sp_ts = 1.5;    % [s] Step size of setpoint
-tm    = 1;      % [s] Settle time of setpoint generator
+seed  = 48125;      % Seed for Uniform Random Number
+
+sp_ts = 5;    % [s] Step size of setpoint
+tm    = 4;      % [s] Settle time of setpoint generator
+
+%Transient reference generator
+r = 1e2;
+h = 10*ts;
 
 %% Limits
-I_limit = 2000;  % [mA] Max/min current
+I_limit = 1000;  % [mA] Max/min current
 
 
