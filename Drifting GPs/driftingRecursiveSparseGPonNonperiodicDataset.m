@@ -52,7 +52,7 @@ P = N_io(2);    % Number of outputs
 
 %% Resampling & select active signals
 TS =  batchSize*ts; % Stepsize over each batch update
-X  = X(:,X_active);  % Select signals
+X  = X(:,X_active); % Select signals
 NX = size(X,2);     % Dimension of input vector
 
 %% Initialize Gaussian process

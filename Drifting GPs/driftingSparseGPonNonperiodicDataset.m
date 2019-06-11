@@ -14,8 +14,8 @@ X = X(206:5e3,:);
 Y = Y(206:5e3,:);
 
 
-load('y_predict_BaxterRand.mat')
-Y_predict = YMUVall';
+%load('y_predict_BaxterRand.mat')
+%Y_predict = YMUVall';
 % mu_Y  = mean(Y_predict);
 % sig_Y = std(Y_predict);
 % Y_predict = (Y_predict - mu_Y) ./ sig_Y;
@@ -37,7 +37,7 @@ param_fix      =  [];       % Exclude hyperparams from update (by indices) (only
 showAnimation  =  false;    % Show an (online) animation of predictions
 loadSettings   =  false;
 saveSettings   =  false;
-settingsFile   =  ['Results/',dataID(1:end-4),'_settings.mat'];
+%settingsFile   =  ['Results/',dataID(1:end-4),'_settings.mat'];
 
 Z = 50;        % Size of drifting window
 M = 50;         % Number of inducing points (for sparse GPR)
