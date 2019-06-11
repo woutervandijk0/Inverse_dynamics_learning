@@ -22,14 +22,13 @@ sim('solve_chol_sfun_test')
 %Check result
 sol2 = squeeze(simout.Data(:,1,1));
 %%
-fprintf('\nFrom   solve_chol.mexw64     solve_chol_sfun.mexw64 \n')
-fprintf('         %.3f                  %.3f \n',[sol1,sol2])
 
 fprintf('\nsolve_chol.mexw64:        [%.3f',sol1(1))
 fprintf(', %.3f',sol1(2:10)); fprintf('] \n');
 
-fprintf('solve_chol_solve.mexw64:  [%.3f',sol2(1))
+fprintf('solve_chol_sfun.mexw64:  [%.3f',sol2(1))
 fprintf(', %.3f',sol2(2:10));fprintf('] \n');
 
 fprintf('B:                        [%.3f',B(1))
 fprintf(', %.3f',B(2:10));fprintf('] \n');
+

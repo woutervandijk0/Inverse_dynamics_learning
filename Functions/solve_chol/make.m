@@ -55,4 +55,38 @@ else                                                                    % Matlab
     eval('mex -O -lmwlapack solve_chol.c')
   end
 end
-fprintf('Done!\n')
+fprintf('Done with solve_chol!\n')
+
+%% solve_chol_L
+fprintf('Compiling solve_chol.c ...\n')
+if OCTAVE                                                               % Octave
+  if ismac
+                                           % Accelerate framework needed on OS X
+    fprintf('mkoctfile --mex solve_chol_L.c "-Wl,-framework,Accelerate"\n')
+    mkoctfile --mex solve_chol_L.c '-Wl,-framework,Accelerate'
+  else
+    fprintf('mkoctfile --mex solve_chol_L.c\n')
+    mkoctfile --mex solve_chol_L.c
+  end
+  delete solve_chol.o
+else                                                                    % Matlab
+  if ispc                                                              % Windows
+    try                                       % take care of old Matlab versions
+      cc = mex.getCompilerConfigurations; cc = lower(cc.Manufacturer);% compiler
+    catch
+      cc = 'microsoft';
+    end
+    if numel(strfind(computer,'64'))                                    % 64 bit
+      ospath = ['extern/lib/win64/',cc];
+    else                                                                % 32 bit
+      ospath = ['extern/lib/win32/',cc];
+    end
+    comp_cmd = 'mex -O solve_chol_L.c -output solve_chol_L';
+    fprintf('%s "../%s"\n',comp_cmd,[ospath,'/libmwlapack.lib'])
+    eval([comp_cmd,' ''',matlabroot,'/',ospath,'/libmwlapack.lib',''''])
+  else
+    fprintf('mex -O -lmwlapack solve_chol_L.c\n')
+    eval('mex -O -lmwlapack solve_chol_L.c')
+  end
+end
+fprintf('Done with solve_chol_L!\n')
