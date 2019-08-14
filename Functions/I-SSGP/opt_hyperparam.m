@@ -1,4 +1,4 @@
-function hyp = opt_hyperparam(hyp,x,y,sn2,Z,D,RAND,n)
+function hyp = onlineHyperUpdate_SSGP(hyp,x,y,sn2,Z,D,RAND,n)
 options = optimset();
 options.Display = 'none';
 options.MaxIter = 10;

@@ -137,7 +137,8 @@ for ii = Z:(numIter-1)
         %Build common terms
         [La, Lb, LD, LSa, LDinv_c, Dff, Sainv_ma, LM, Q, LQ] = osgpBuildTerms(hyp,sn,f,yf',A,B,Saa,ma,Kaa_old,alpha);
         %Predict
-        [m(iter),var,Su] = predictOSGP(hyp, b, s, Lb, LD, LDinv_c, Kbs);
+        Kbs         = SEcov(B,s,hyp);
+        [m(iter),var,Su] = predictOSGP(hyp, B, s, Lb, LD, LDinv_c, Kbs);
         
     else
         %Build common terms

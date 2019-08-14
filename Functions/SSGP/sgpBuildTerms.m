@@ -2,9 +2,11 @@ function [LDinv_Lbinv_Kbs, LDinv_c, Lbinv_Kbs,...
     Dff,LD,Kbb] = sgpBuildTerms(hyp,sn,f,yf,b,s,alpha);
 
 jitter = 1e-4;
-Mb = length(b);
+Mb = size(b,1);
+Mf = size(f,1);
+sn2 = sn^2;
 
-Kff     = SEcov(f,f,hyp);
+Kff     = SEcov(f,f,hyp) + eye(Mf)*jitter;
 Kfdiag  = diag(Kff);
 Kbf     = SEcov(b,f,hyp);
 Kbb     = SEcov(b,b,hyp) + eye(Mb)*jitter;
@@ -14,7 +16,7 @@ Lbinv_Kbf   = solve_lowerTriangular(Lb,Kbf);
 
 Qfdiag      = Kfdiag - diag(Lbinv_Kbf'*Lbinv_Kbf);
 %Qfdiag      = Kfdiag' - sum(Lbinv_Kbf.^2);
-Dff         = sn + alpha.*Qfdiag;
+Dff         = sn2 + alpha.*Qfdiag;
 Lbinv_Kbf_LDff = Lbinv_Kbf./sqrt(Dff');
 
 D = eye(Mb) + Lbinv_Kbf_LDff*Lbinv_Kbf_LDff';

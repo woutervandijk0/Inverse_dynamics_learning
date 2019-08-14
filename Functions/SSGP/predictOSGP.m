@@ -1,19 +1,14 @@
 function [m,var,Su] = predictOSGP(hyp,b,s,Lb,LD,LDinv_c,Kbs)
-lowtriang   = dsp.LowerTriangularSolver;
-lowtriang.release();
-
 jitter = 1e-8;
 
-Kbs = SEcov(b,s,hyp);
-Lbinv_Kbs = lowtriang(Lb, Kbs);
-lowtriang.release();
-LDinv_Lbinv_Kbs = lowtriang(LD, Lbinv_Kbs);
-lowtriang.release();
+%Kbs = SEcov(b,s,hyp);
+Lbinv_Kbs       = solve_lowerTriangular(Lb, Kbs);
+LDinv_Lbinv_Kbs = solve_lowerTriangular(LD, Lbinv_Kbs);
 
 %Predictive mean
 m = LDinv_Lbinv_Kbs'*LDinv_c;
 
-Ms = length(s);
+Ms = size(s,1);
 %Prediction variance (matrix)
 Kss = SEcov(s,s,hyp) + eye(Ms)*jitter;
 var1 = Kss;

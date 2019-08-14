@@ -1,10 +1,10 @@
-%clear all, clc
+clear all, clc
 fig2pdf = 0;
 pdf2ipe = 0;
 
 %% Load dataset:
-%dataID = 'TFlexADRC_RN20.mat';
-%[xTrain, yTrain, ts] = selectData(dataID,'fig',false);
+dataID = 'TFlexADRC_RN20.mat';
+[xTrain, yTrain, ts] = selectData(dataID,'fig',false);
 xTrain = xTrain(:,:)';
 yTrain = yTrain';
 [dof, N] = size(xTrain);
@@ -204,7 +204,7 @@ Ms = length(s);
 Kaa = SEcov(b,b,hyp);
 Kaa_old = Kaa;
 %[nlml(3)] = osgpNLML(hyp,sn,alpha,f,yf,a,b,Saa,ma,Kaa_old,err);
-[hyp nlml(4)] = fminsearch(@(hyp) osgpNLML(hyp,sn,alpha,f,yf,a,b,Saa,ma,Kaa_old,err),hyp,options);
+%[hyp nlml(4)] = fminsearch(@(hyp) osgpNLML(hyp,sn,alpha,f,yf,a,b,Saa,ma,Kaa_old,err),hyp,options);
 Kaa_old = Kaa;
 hyp_st(3,:) = hyp;
 
@@ -302,7 +302,7 @@ Ms = length(s);
 %% Hyperparameter optimalisation
 Kaa = SEcov(a,a,hyp);
 %[nlml(3)] = osgpNLML(hyp,sn,alpha,f,yf,a,b,Saa,ma,Kaa_old,err);
-[hyp nlml(4)] = fminsearch(@(hyp) osgpNLML(hyp,sn,alpha,f,yf,a,b,Saa,ma,Kaa_old,err),hyp,options);
+%[hyp nlml(4)] = fminsearch(@(hyp) osgpNLML(hyp,sn,alpha,f,yf,a,b,Saa,ma,Kaa_old,err),hyp,options);
 
 hyp_st(4,:) = hyp;
 

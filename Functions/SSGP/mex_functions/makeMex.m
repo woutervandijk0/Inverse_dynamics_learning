@@ -58,7 +58,42 @@ else                                                                    % Matlab
 end
 fprintf('Done with solve_lowerTriangular!\n')
 
-%% solve_lowerTriangular
+%% solve_upperTriangular
+fprintf('Compiling solve_upperTriangular.c ...\n')
+if OCTAVE                                                               % Octave
+  if ismac
+                                           % Accelerate framework needed on OS X
+    fprintf('mkoctfile --mex solve_upperTriangular.c "-Wl,-framework,Accelerate"\n')
+    mkoctfile --mex solve_upperTriangular.c '-Wl,-framework,Accelerate'
+  else
+    fprintf('mkoctfile --solve_upperTriangular.c\n')
+    mkoctfile --mex solve_upperTriangular.c
+  end
+  delete solve_chol.o
+else                                                                    % Matlab
+  if ispc                                                              % Windows
+    try                                       % take care of old Matlab versions
+      cc = mex.getCompilerConfigurations; cc = lower(cc.Manufacturer);% compiler
+    catch
+      cc = 'microsoft';
+    end
+    if numel(strfind(computer,'64'))                                    % 64 bit
+      ospath = ['extern/lib/win64/',cc];
+    else                                                                % 32 bit
+      ospath = ['extern/lib/win32/',cc];
+    end
+    comp_cmd = 'mex -O solve_upperTriangular.c -output solve_upperTriangular';
+    fprintf('%s "../%s"\n',comp_cmd,[ospath,'/libmwlapack.lib'])
+    eval([comp_cmd,' ''',matlabroot,'/',ospath,'/libmwlapack.lib',''''])
+  else
+    fprintf('mex -O -lmwlapack solve_upperTriangular.c\n')
+    eval('mex -O -lmwlapack solve_upperTriangular.c')
+  end
+end
+fprintf('Done with solve_upperTriangular!\n')
+
+
+%% solve_linSystem
 fprintf('Compiling solve_linSystem.c ...\n')
 if OCTAVE                                                               % Octave
   if ismac

@@ -1,0 +1,33 @@
+%% Abstract:
+%%      Tlc file for S-function solve_chol_sfun.c
+%% 		Uses a wrapper for calling dpotrs
+%%
+%% Author: Wouter van Dijk
+%% Date:   15-5-2019
+
+%implements "solve_chol_sfun" "C"
+
+%% Function: BlockTypeSetup ===============================================
+
+%function BlockTypeSetup(block, system) void
+  %openfile buffer
+
+  extern  int_T call_dpotrs(const real_T* A, const real_T* B, real_T* X, int_T* D);
+
+  %closefile buffer
+  %<LibCacheFunctionPrototype(buffer)>
+%endfunction
+
+
+%% Function: Outputs ======================================
+
+%function Outputs(block, system) Output
+
+  /* %<Type> Block: %<Name> */
+  %assign A = LibBlockInputSignalAddr(0, "", "", 0)
+  %assign B = LibBlockInputSignalAddr(1, "", "", 0)
+  %assign X = LibBlockOutputSignalAddr(0, "", "", 0)
+  %assign D = LibBlockInputSignalDimensions(0)[0]
+  call_dpotrs(%<A>, %<B>, %<X>, %<D>) ;
+
+%endfunction

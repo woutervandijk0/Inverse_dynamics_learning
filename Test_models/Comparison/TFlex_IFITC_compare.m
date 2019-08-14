@@ -1,0 +1,198 @@
+
+fig2pdf = 0;
+pdf2ipe = 0;
+
+%% Data selection (intial)
+i_f = [1:2000];
+i_u = [1:5:i_f(end)];
+i_s = i_f;
+
+f  = xTrain(:,i_f)';
+u  = xTrain(:,i_u)';
+s  = xTrain(:,i_s)';
+
+
+yf = yTrain(:,i_f)';
+ys = yTrain(:,i_s)';
+
+Mf  = length(i_f);
+%% Run FITC over initial window
+[mu_s, var_s, mu_u, var_u, Kuu] = FITC(hyp,sn,u,f,yf,s);
+
+%% Remove inducing points
+%Keep Nkeep inducing points
+Nkeep = 1;
+Nremove = size(u,1)-Nkeep;
+[u,Kuu,Lu,mu_u,var_u,Mu] = updateInducing(hyp,sn,u,mu_u,var_u,Kuu,u(Nremove,:),Nremove);
+u_init = u;
+
+%% Run simulation
+m_eq = 0;
+tic;
+sim('TFlex_IFITC')
+elap_time = toc;
+
+%% Plot Results
+Error = error(:)*pi/180;
+FF_SSGP = FF_SSGP(:)';
+FF_RBD = FF_RBD(:);
+controlOutput = controlOutput(:);
+torqueError   = trainingTarget(:);
+actualCurrent = actualCurrent(:);
+setpointCurrent = setpointCurrent(:);
+t     = [0:length(Error)-1]*ts;
+ist  = 1000;
+tOn1 = t_learn;
+tOn2 = t_end;
+t1 = [tOn1 tOn1];
+t2 = [tOn2 tOn2];
+
+
+fSize  = 20;
+fig151 = figure(151);clf(151);
+ylimits = [-0.00005 0.00005];
+han(1,1) = subplot(2,1,1);
+hold on
+set(gca,'FontSize',fSize-3);
+plot(t(ist:end),Error(ist:end));
+ylimit(1) = min([Error(ist:end);ylimits(1)]);
+ylimit(2) = max([Error(ist:end);ylimits(2)]);
+plot(t1,ylimit,'--k');
+plot(t2,ylimit,'--k');
+title(['Incremental-FITC '],'Interpreter','Latex','FontSize',fSize);
+%legend('\theta_1')
+%ylim(ylimits);
+ylabel('$e$ (rad)','Interpreter','Latex','FontSize',fSize);
+hold off
+
+han(2,1) = subplot(2,1,2);
+hold on ;
+set(gca,'FontSize',fSize-3);
+plot(t(ist:end),controlOutput(ist:end));
+
+tFF = [0:length(FF_SSGP)-1]*ts;
+plot(tFF(ist:end),FF_SSGP(ist:end),'LineWidth',1.5);
+
+ylimit(1) = min([controlOutput(ist:end);FF_SSGP(ist:end)']);
+ylimit(2) = max([controlOutput(ist:end);FF_SSGP(ist:end)']);
+plot(t1,ylimit,'--k');
+plot(t2,ylimit,'--k');
+legend('$u_{FB}$','$u_{UD}$','Interpreter','Latex','FontSize',fSize);
+ylabel('(mA)','Interpreter','Latex','FontSize',fSize);
+xlabel('time (s)','Interpreter','Latex','FontSize',fSize);
+hold off
+
+%{
+han(3,1) = subplot(2,1,3);
+hold on 
+plot(t(ist:end),FF_SSGP(ist:end))
+ylimit(1) = min([FF_SSGP(ist:end)]);
+ylimit(2) = max([FF_SSGP(ist:end)]);
+plot(t1,ylimit,'--k')
+plot(t2,ylimit,'--k')
+%legend('FF')
+ylabel('I-SSGP FF (mA)')
+xlabel('time (s)')
+hold off
+%}
+[fig151,han] = subplots(fig151,han,'gabSize',[0.09, 0.07]);
+
+%% Setpoint
+%{
+q = squeeze(trainingInput(:,1,:));
+%q = trainingInput';
+%
+fig150 = figure(150); clf(150);
+ha(1,1) = subplot(4,1,1);
+hold on
+plot(t,q(1,:))
+ylabel('(rad)')
+hold off
+
+ha(2,1) = subplot(4,1,2);
+hold on
+plot(t,q(2,:))
+ylabel('(rad/s)')
+hold off
+
+ha(3,1) = subplot(4,1,3);
+hold on
+plot(t,q(3,:))
+ylabel('(rad/s^2)')
+hold off
+
+ha(4,1) = subplot(4,1,4);
+hold on
+plot(t,FF_SSGP,'r')
+ylabel('(N m)')
+hold off
+
+[fig150,ha] = subplots(fig150,ha)
+%}
+%% Hyperparameters
+%{
+hyperparameter = hyperParam;
+fig222 = figure(222),clf(222);
+tHyp = [0:length(hyperparameter)-1].*ts; %ts_opti;
+han222(1,1) = subplot(2,1,1);
+plot(tHyp,hyperparameter(:,1:3)','LineWidth',1.5)
+legend('$l_1 \sim \theta$','$l_2 \sim \dot{\theta}$','$l_3 \sim \ddot{\theta}$','Interpreter','Latex')
+title('Hyperparameters')
+han222(2,1) = subplot(2,1,2);
+plot(tHyp,hyperparameter(:,4)','LineWidth',1.5)
+legend('$\sigma_f$','Interpreter','Latex')
+xlabel('t (s)')
+
+[fig222,han222] = subplots(fig222,han222,'gabSize',[0.09, 0.03])
+
+ell = hyperparameter(end-1,1:3);
+sf = hyperparameter(end-1,4);
+disp('Final Hyperparameters:')
+disp(['sf:  ',num2str(sf)])
+disp(['ell: ',num2str(ell)])
+format
+%}
+%% Elapsed time
+fprintf('\nDelay introduced by State Variable Filter: %i timesteps\n',svf_delay)
+
+fprintf('\nElapsed time during simulation: %.3f s \n',[elap_time]);
+t_learn = 0;
+fprintf("Time, using 'solve_chol_sfun' during simulation: %.3f s \n",t_end-t_learn);
+
+%% Noise calculation
+signal = torqueError(5/ts:end);
+mu = mean(signal);
+
+sn_measured = rms(signal-mu);
+fprintf('\n')
+fprintf('Noise (RMS): %f mA\n',sn_measured)
+
+%% ERROR 
+Error = error(:);
+N = length(trainingTarget(:));
+i_noISSGP = t_predict/ts;
+i_ISSGP   = (100)/ts;
+rmsErrorStationary = [0.621084,0.293680]*1e-3;
+if N > i_ISSGP
+    format shortEng
+    fprintf('\n')
+    fprintf('RMS error (10^-3 degree):\n')
+    fprintf('Before I-SSGP: %f \n',rms(Error(1:i_noISSGP))*10^3)
+    fprintf('After  I-SSGP: %f \n',rms(Error(i_ISSGP:end))*10^3)
+    fprintf('Stationary   : %f  (at 3.3 degree)\n',rmsErrorStationary(1)*10^3)
+    fprintf('Stationary   : %f  (at -3.3 degree)\n',rmsErrorStationary(2)*10^3)
+    format
+else
+    fprintf('\nNo predictions made using I-SSGP... \n')
+end
+
+%% Save Figures
+if(fig2pdf)
+    %saveas(fig222,fullfile(pwd,'Images','Hyperparameters.pdf'))
+    %saveas(fig150,fullfile(pwd,'Images','TrainingData.pdf'))
+    saveas(fig151,fullfile(pwd,'Images','Error_IFITC.pdf'))
+end
+%% PDF2IPE
+if(pdf2ipe)
+    pdf2ipepdf_v2(fullfile(pwd,'Images'),{''},{''})
+end

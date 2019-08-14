@@ -1,9 +1,10 @@
 function [bound] = osgpNLML(hyp,sn,alpha,f,yf,a,b,Saa,ma,Kaa_old,err)
+%hyp = abs(hyp(1:end-1));
+%sn = abs(hyp(end));
 
-%{
-Construct a tensorflow function to compute the bound on the marginal
-likelihood.
-%}
+ hyp = abs(hyp);
+ sn  = abs(sn);
+
 Mf = length(f);
 [La, Lb, LD, LSa, LDinv_c, Dff, Sainv_ma, LM, Q, LQ] = osgpBuildTerms(hyp,sn,f,yf,a,b,Saa,ma,Kaa_old,alpha);
 

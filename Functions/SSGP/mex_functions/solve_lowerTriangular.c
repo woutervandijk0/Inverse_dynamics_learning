@@ -23,7 +23,7 @@ extern integer dtrtrs_(char *, char *, char *, integer *, integer *, doublereal 
                                             doublereal *, integer *, integer *);  
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
-{                                        /* Matlab call: X = solve_chol(A, B) */
+{                                        /* Matlab call: X = solve_lowerTriangular(A, B) */
   doublereal *C;
   integer n, m, q;
 

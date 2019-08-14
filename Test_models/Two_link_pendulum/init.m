@@ -2,16 +2,16 @@ clear all, %close all,% clc
 %clearvars -except w b v R SIGMA D
 model = 'Coupled_GP_fit';
 
-FF_rbd = 0; 
+FF_rbd = 1; 
 %% Simulink Parameters
 fs = 1000;      % [Hz] Sample rate
 ts = 1/fs;      % [s]  Sample time
 ts_opti = ts*100
 t_end     = 150;
 t_start   = 15;
-t_learn   = [t_start t_end];   %[s] Switch for updating the posterior
-t_predict = [t_start+10];
-t_hypUpdate = [t_start t_end];
+t_learn   = [80 t_end];   %[s] Switch for updating the posterior
+t_predict = [100];
+t_hypUpdate = [5 80];
 t_switch  = 5;          % [s]  Time interval over which the I-SSGP is turned on
 reference_switch = t_end
 
@@ -78,40 +78,24 @@ acceleration.signals.dimensions = 1;
 
 %% Online Sparse Gaussian Process regression
 Q  = 2;
-D  = 50;
+D  = 100;
 Z  = 2000;
 Z_resamp = 100;
 n  = 6;
 alpha = 1;
 
-sn = [9.2736;5.2731];
-sn = [5.2731;5.2731];
-%sn  = [1;1]
-%sn  = [0.5;0.5]
-sn = [0.1;0.1]
 sn = [0.0244;0.0672];
 %sn = [0.01;0.01]
 
-%dataID = 'DoublePendulum.mat'
-dataID  = 'DoublePendulumRand.mat'
-%dataID  = 'DoublePendulumRand1.mat'
-
-[~, sf, ell] = loadHyperparams(dataID,false);
-disp([char(10),'Hyperparams loaded for: ',dataID])
-disp(['ell: ',num2str(ell(1,:))])
-disp(['sf : ',num2str(sf(1:Q)')]);
-disp(['sn : ',num2str(sn(1:Q)'),char(10)]);
-hyp =   [ell(:,1:n),sf];
-hyp(1,:) = 0.1;
-% hyp     = [1.7251   -1.6495   -0.0666   -0.4199    0.4007    0.1012    0.1317;
-%     0.4891   -3.3727    0.2984   -0.0253    0.2786    0.0600    0.1900];
+sf    = [1;1];
+l     = ones(2,n)
+hyp   = [l,sf]
 
 %% state variable filter
 omega_n = 95*2*pi;
 a0 = omega_n^3;
 a1 = 3*omega_n^2;
 a2 = 3*omega_n;
-
 
 %%
 %
@@ -229,12 +213,12 @@ FF(2).gain   = 1;
 %mu_X  = mean(X);
 %sig_X = std(X);
 mu_X  = zeros(1,size(n,2));%mean(X);
-sig_X = ones(1,size(n,2)).*0.5% std(X);
+sig_X = ones(1,size(n,2))% std(X);
 
 %mu_Y  = mean(Y);
 %sig_Y = std(Y);
 mu_Y  = zeros(1,size(Q,2));
-sig_Y = [50 15];%std(Y);
+sig_Y = ones(1,size(n,2))% std(Y);
 
 %% Switch on/off I-SSGP algorithm
 t_learn   = [0, t_learn]';
@@ -251,7 +235,6 @@ predict.signals.dimensions = 1;
 
 %% Run simulink model
 tic
-set_param(model,'Profile','off')
 sim(model)
 toc
 

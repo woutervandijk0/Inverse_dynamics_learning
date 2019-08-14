@@ -10,11 +10,13 @@
 
 #include <string.h>
 #include "simstruc.h"
+#include <lapacke.h>
 
 #if !defined(_WIN32) /* not Win32/Matlab */
   #define dpotrs dpotrs_
 #endif
-
+extern int_T dpotrs_(char *, int_T *, int_T *, real_T *, int_T *,
+                                            real_T *, int_T *, int_T *);
 /*=========*
  * Defines *
  *=========*/
@@ -79,9 +81,6 @@ static void mdlInitializeSampleTimes(SimStruct *S)
     ssSetOffsetTime(S, 0, 0.0);
     ssSetModelReferenceSampleTimeDefaultInheritance(S); /* Inherit sample time */
 }
-
-extern int_T dpotrs_(char *, int_T *, int_T *, real_T *, int_T *,
-                                            real_T *, int_T *, int_T *);
 
 
 /* Function: mdlOutputs =======================================================

@@ -11,7 +11,7 @@ dataID = 'TFlexADRC_RN20.mat';
 %dataID  = 'DoublePendulumRand1.mat'
 
 %% Settings 
-param_update   =  false;  % Update hyperparameters in the loop (true/false)
+param_update   =  true;  % Update hyperparameters in the loop (true/false)
 loadSetpoint   =  false;   % 
 compareWTrue   =  false;  % Compare with real data (only for periodic datasets)
 loadParams     =  false;   % Load hyper parameters from previous run
@@ -34,12 +34,13 @@ resamp = 1;
 alpha = 1;      % Update posterior
 kappa = 1;      % Prediction
 beta  = 1;      % Hyperparameters
-beta_min   = 0.001;
-beta_reduc = 0.99
+beta_min   = 0.000;
+beta_reduc = 0.95
 
 %% Load dataset & Normalize 
 % Load
 [X,Y,ts,N_io] = selectData('dataset',dataID,'fig',true,'figNum',1);
+
 %X = X(150/ts:end,:);
 %Y = Y(150/ts:end,:);
 
@@ -186,6 +187,8 @@ for ii = Z:numIter
             sf(i)    = hyp(i,end);
             SIGMA(i,1:D,1:n) = RAND.*hyp(i,1:n);
             iterHypOpti = iterHypOpti+1;
+            beta = beta*beta_reduc;
+            beta = max(beta,beta_min);
         end
         if iter < onlyPredict
             %Update posterior
@@ -204,8 +207,7 @@ for ii = Z:numIter
         disp([num2str(round(ii/numIter*100)),' %'])
     end
     iter = iter+1;
-    beta = beta*beta_reduc;
-    beta = max(beta,beta_min);
+
 end
 toc;
 t_run = toc/(ii-Z);

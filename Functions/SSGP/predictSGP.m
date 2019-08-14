@@ -1,6 +1,6 @@
 function [m,var,Su] = predictSGP(hyp, s, LDinv_Lbinv_Kbs, LDinv_c, Lbinv_Kbs)
 jitter = 1e-4;
-Ms = length(s);
+Ms = size(s,1);
 
 %Predictive mean
 m = LDinv_Lbinv_Kbs'*LDinv_c;

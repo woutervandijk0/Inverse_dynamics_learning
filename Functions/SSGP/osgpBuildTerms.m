@@ -1,7 +1,10 @@
 function [La, Lb, LD, LSa, LDinv_c, Dff, Sainv_ma, LM, Q, LQ] = osgpBuildTerms(hyp,sn,f,yf,a,b,Saa,ma,Kaa_old,alpha)
 jitter = 1e-4;
-Ma = length(a);
-Mb = length(b);
+Ma = size(a,1);
+Mb = size(b,1);
+Mf = size(f,1);
+sn2 = sn.^2;
+jitter = sn;
 
 Kfdiag  = diag(SEcov(f,f,hyp));
 Kbf     = SEcov(b,f,hyp);
@@ -13,9 +16,12 @@ Kaa     = Kaa_old + eye(Ma)*jitter;
 Lb          = chol(Kbb,'lower');
 Lbinv_Kbf   = solve_lowerTriangular(Lb,Kbf);
 
+%Qfdiag      = Kfdiag - diag(Lbinv_Kbf'*Lbinv_Kbf);
 Qfdiag      = Kfdiag - diag(Lbinv_Kbf'*Lbinv_Kbf);
-%Qfdiag      = Kfdiag' - sum(Lbinv_Kbf.^2);
-Dff         = sn.^2 + alpha.*Qfdiag;
+%diag(Lbinv_Kbf'*Lbinv_Kbf) - sum(Lbinv_Kbf,1)
+%Qfdiag      = Kfdiag' - sum(Lbinv_Kbf.^2,1);
+Dff         = sn2 + alpha.*Qfdiag;
+
 Lbinv_Kbf_LDff = Lbinv_Kbf./sqrt(Dff');
 d1 = Lbinv_Kbf_LDff*Lbinv_Kbf_LDff';
 
@@ -24,10 +30,8 @@ Kab_Lbinv = Lbinv_Kba';
 
 %Sainv_Kab_Lbinv = Saa\Kab_Lbinv;
 Sainv_Kab_Lbinv = solve_linSystem(Saa,Kab_Lbinv);
-
 %Kainv_Kab_Lbinv = Kaa\Kab_Lbinv;
 Kainv_Kab_Lbinv = solve_linSystem(Kaa,Kab_Lbinv);
-
 Da_Kab_Lbinv = Sainv_Kab_Lbinv - Kainv_Kab_Lbinv;
 d2 = Lbinv_Kba*Da_Kab_Lbinv;
 
@@ -48,10 +52,10 @@ LMT_Da_Kab_Lbinv = LMT*Da_Kab_Lbinv;
 %Qinv_t1 = Q\LMT_Da_Kab_Lbinv;
 Qinv_t1 = solve_linSystem(Q,LMT_Da_Kab_Lbinv);
 t1_Qinv_t1 = LMT_Da_Kab_Lbinv'*Qinv_t1;
-d3 = -alpha * t1_Qinv_t1;
+d3 = -alpha.*t1_Qinv_t1;
 
 D = eye(Mb) + d1 + d2 + d3;
-D = D + eye(Mb)* jitter;
+D = D + eye(Mb)*jitter;
 LD = chol(D,'lower');
 
 %Sainv_ma           = Saa\ ma;
@@ -62,7 +66,7 @@ Lbinv_Kba_Da_LM     = Lbinv_Kba_Da*LM;
 %Qinv_LMT_Sainv_ma   = Q\LMT_Sainv_ma;
 Qinv_LMT_Sainv_ma   = solve_linSystem(Q,LMT_Sainv_ma);
 
-Sinv_y              = (yf./Dff')';
+Sinv_y  = (yf./Dff')';
 c1      = Lbinv_Kbf*Sinv_y;
 c2      = Lbinv_Kba*Sainv_ma;
 c3      = - alpha*Lbinv_Kba_Da_LM*Qinv_LMT_Sainv_ma;

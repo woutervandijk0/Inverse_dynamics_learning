@@ -1,3 +1,4 @@
+%{
 clc, clear all;
 ts = 1/1000;
 sysdata = SimulinkRealTime.utils.getFileScopeData('SYSOUT.DAT');
@@ -101,4 +102,39 @@ end
 %%
 xTrain = xTrain';
 yTrain = yTrain';
+%}
+%% state variable filter (2nd Order)
+s = tf('s');
 
+omega_n = 50*2*pi;  %[rad/s] Natural frequency
+% Coefficients
+a0 = omega_n^3;
+a1 = 3*omega_n^2;
+a2 = 3*omega_n;
+
+%Transfer function
+SVF   = 1/(s^3 + a2*s^2 + a1*s + a0);   % Continuous
+SVF_d = c2d(SVF,ts);                    % Discrete
+
+%Delay (at controller crossover)
+crossover = 35;
+[mag,phase,wout] = bode(SVF,crossover);
+svf_delay = -(phase)/(2*pi*wout);
+svf_delay = round(svf_delay/(ts*10));
+fprintf('\nDelay introduced by State Variable Filter (at crossover): %i timesteps\n',svf_delay)
+clear crossover mag phase wout SVF_d SVF s omega_n 
+
+%%
+ts = 0.001;
+AngleDeg = xTrain(1,:)';
+
+t = [0:length(AngleDeg)-1]*ts;
+angle.time = t';
+angle.signals.values = AngleDeg;
+angle.signals.dimensions = [1];
+
+sim('SVF_fromWorkspace')
+
+y       = states.y.Data;
+y_dot   = states.y_dot.Data;
+y_ddot  = states.y_ddot.Data;
