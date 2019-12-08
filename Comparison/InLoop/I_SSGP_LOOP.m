@@ -29,7 +29,6 @@ sn = sn_old;
 %sn = 1
 
 %% Data selection (intial)
-
 f  = xTrain(:,i_f)';
 u  = xTrain(:,i_u)';
 s  = xTrain(:,i_s)';
@@ -41,7 +40,7 @@ yloop   = yTrain(:,i_loop)';
 
 %% I-SSGP (fist part)
 % Number of random features
-D = 500;   
+D = 21;   
 sn2 = sn.^2;
 sf  = hyp(1);
 
@@ -93,7 +92,7 @@ iter = 1;
 for jj = i_loop
     % New data
     i_sNew = jj+1;
-    sNew   = xTrain(:,i_sNew)';    % New test point  
+    sNew   = xSp(:,i_sNew)';    % New test point  
     %sNew   = xSetpoint(:,i_sNew)';   % New test point (from setpoint)
     yTrue  = yTrain(:,i_sNew)';     % Such that we can compare later
 
@@ -112,10 +111,21 @@ for jj = i_loop
     yTest(iter)  = yTrue;
     iTest(iter)  = i_sNew;
     
+    phi = sf./sqrt(D) .*[cos(SIGMA*fp')',...
+                         sin(SIGMA*fp')']';
+    
     %Update posterior
     b =  b + phi*yfp;
     R = cholupdate(R,phi);
     w = solve_chol(R,b);
+    
+    if mod(iter,100) == 0
+        figure(222)
+        colormap  hot
+        imagesc(R'*R)
+        %imagesc(R)
+        caxis([0 8.2432e+07])
+    end
     
     iter = iter + 1;
 end
@@ -148,7 +158,7 @@ yloop  = yloop.*sig_Y + mu_Y;
 
 %% Results
 fSize = 12;
-resultsIFITC = figure(3);clf(resultsIFITC);
+resultsISSGP = figure(3);clf(resultsISSGP);
 %{
 sphandle(1,1) = subplot(2,1,1);
 hold on
@@ -167,25 +177,47 @@ ylabel('y','Interpreter','Latex','FontSize',fSize+4)
 hold off
 clear ha
 %}
-
-sphandle(1,1) = subplot(1,1,1);
+sphandle(1,1) = subplot(2,1,1);
+set(gca,'FontSize',fontSize);
 hold on
-han(2) = scatter(T(1,i_f),yf(:,1),'xk');
-han(2).MarkerFaceAlpha = .6;
-han(2).MarkerEdgeAlpha = .6;
-han(1) = scatter(iTest*Ts,yloop(:,1),'xb');
-han(3) = plot(iTest*Ts,pred,'r','LineWidth',1.5);
+%han(1) = scatter(T(1,i_f),yf(:,1),'xk');
+han(1) = plot(T(1,i_loop(1:M)),yloop(1:M),'-','LineWidth',1.5,'MarkerSize',3);
+han(2) = plot(iTest*ts,pred,'--k','LineWidth',1);
 %scatter(u(:,1),zeros(Mu,1))
-han(4) = plot(iTest*Ts,pred + 2*sqrt(vari+sn^2),'k');
-plot(iTest*Ts,pred - 2*sqrt(vari+sn^2),'k');
+%han(4) = plot(iTest*Ts,pred + 2*sqrt(vari+sn^2),'k');
+%plot(iTest*Ts,pred - 2*sqrt(vari+sn^2),'k');
 %legend(han,'Initial data','Incremental data','t+1 predictions',...
-%    'Predictive var.','Interpreter','Latex','FontSize',fSize);
-ylabel('y','Interpreter','Latex','FontSize',fSize+4)
-xlabel('t (s)','Interpreter','Latex','FontSize',fSize+4)
-title('Incremental Sparse Spectrum GP - Gijsberts2013','Interpreter','Latex','FontSize',fSize+8)
+%    'Predictive var.','Interpreter','Latex','FontSize',legendSize);
+ylabel('(mA)','Interpreter','Latex','FontSize',labelSize)
+xlabel('t (s)','Interpreter','Latex','FontSize',labelSize)
+%title('Incremental FITC - Bijl2015','Interpreter','Latex','FontSize',fontSize+8)
+%legend(han,'$y$','$\mu_{*,t+1}$','Interpreter','Latex')
+xlim([1 35])
 hold off
 clear ha han
-[resultsIFITC,sphandle] = subplots(resultsIFITC,sphandle);
+
+sphandle(2,1) = subplot(2,1,2);
+set(gca,'FontSize',fontSize);
+hold on
+%han(1) = scatter(T(1,i_f),yf(:,1),'xk');
+han(1) = plot(T(1,i_loop(1:M)),yloop(1:M),'-','LineWidth',1.5,'MarkerSize',3);
+han(2) = plot(iTest*ts,pred,'--k','LineWidth',1);
+%scatter(u(:,1),zeros(Mu,1))
+%han(4) = plot(iTest*Ts,pred + 2*sqrt(vari+sn^2),'k');
+%plot(iTest*Ts,pred - 2*sqrt(vari+sn^2),'k');
+%legend(han,'Initial data','Incremental data','t+1 predictions',...
+%    'Predictive var.','Interpreter','Latex','FontSize',legendSize);
+ylabel('(mA)','Interpreter','Latex','FontSize',labelSize)
+xlabel('t (s)','Interpreter','Latex','FontSize',labelSize)
+%title('Incremental FITC - Bijl2015','Interpreter','Latex','FontSize',fontSize+8)
+legend(han,'$y$','$\mu_{*,t+1}$','Interpreter','Latex')
+xlim([18.2 18.65])
+ylim([-21 8])
+hold off
+clear ha han
+set(gcf,'PaperSize',[8.4 8.4*3/4+0.1],'PaperPosition',[0+0.3 0.2 8.4+0.3 8.4*3/4+0.2])
+
+%[resultsISSGP,sphandle] = subplots(resultsISSGP,sphandle);
 
 %% Error
 error = rms(mu_s' - yTrain(1,i_s));

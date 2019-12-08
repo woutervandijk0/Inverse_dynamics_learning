@@ -4,10 +4,10 @@ n = size(x1,2);
 sf = hyp(1);
 l  = hyp(2:end);
 %version 1
-K = sf*exp(-(x1(:,1)-x2(:,1)').^2/(2*l(1)^2));
+K = sf.^2.*exp(-(x1(:,1)-x2(:,1)').^2./(2*l(1).^2));
 if n>1
     for i = 2:n
-        K = K + sf*exp(-(x1(:,i)-x2(:,i)').^2/(2*l(i)^2));
+        K = K + sf.^2*exp(-(x1(:,i)-x2(:,i)').^2/(2*l(i)^2));
     end
 end
 

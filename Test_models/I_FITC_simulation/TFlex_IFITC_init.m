@@ -6,8 +6,8 @@ pdf2ipe = 0;
 ts          = 1/1000;     %[s] Sample time
 t_end       = 200;        %[s] Total simulation time
 t_still     = 10;         %[s] Standstill time at beginning
-t_predict   = 65;         %[s] Make predictions
-t_learn     = 55;         %[s]
+t_predict   = 15;         %[s] Make predictions
+t_learn     = 10;         %[s]
 
 %% Initialize Controller & Plant settings
 Tflex_Controller_init
@@ -37,13 +37,17 @@ sig_Y  = std(yTrain');
 
 %% (Hyper)parameters 
 %Hyperparameters 
-sn   = 2.860155;          % Noise variance
-sf   = 0.5;           % Signal variance
+sn   = 1;          % Noise variance
+sf   = 1;           % Signal variance
 l    = [ones(1,dof)];   % characteristic lengthscale
 
 %overwrite hyperparam
-sf = 142.3843
-l = 1./[0.33922    0.026313   0.0014776];
+sf = 101.81 
+sn = 1.4493 
+l  = [2.53 62.62 784.53]
+
+%sf = 142.3843
+%l = 1./[0.33922    0.026313   0.0014776];
 %Combine into 1 vector
 hyp  = [sf,l];
 %% Data selection (intial)

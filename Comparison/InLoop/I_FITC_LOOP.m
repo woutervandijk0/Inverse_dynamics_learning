@@ -1,55 +1,60 @@
 clear all, clc,
-fprintf('  ----  Incremental FITC - Bijl2015  ----  \n')
 
 %% Load dataset:
-Ts = 1/1000;
-dataID = 'TFlexADRC_RN20.mat';
-dataID = 'TFlexADRC_RN20_Isp.mat';
-%dataID = 'sarcos_inv.mat';
-%dataID = 'TFlex1D5G.mat';
-%dataID = 'TFlex1D-2.mat'
-%dataID = 'sarcos_inv.mat';
-%dataID = 'BaxterRhythmic.mat';
-%dataID = 'BaxterRand.mat';
-[xTrain, yTrain, Ts] = selectData(dataID,'fig',false);
-%{
-load('ISSGP.mat');
-iStart = 100/Ts;
-xTrain = xTrain(:,iStart:end)';
-yTrain = FB(iStart:end,1);
-%}
+%dataID = 'TFlexADRC_RN20.mat';
+%[xTrain, yTrain, ts] = selectData(dataID,'fig',false);
 
-if strcmp( dataID,'TFlexADRC_RN20_Isp.mat')
-    xTrain(1:3,:) = [];
-    yTrain(end-3:3,:) = [];
-end
+ts       = 1/1000;
+N        = length(SimulinkRealTime.utils.getFileScopeData('TRAIN_noFF.DAT').data);
+interval = 20000:(N-5000);
+DATA     = SimulinkRealTime.utils.getFileScopeData('TRAIN_noFF.DAT').data(interval,:);
+
+xTrain = DATA(:,1:3);
+yTrain = DATA(:,4);
+
+fpass = 50;     % [Hz] Passband frequency
+yTrain = lowpass(yTrain,fpass,1/ts);
+xTrain = lowpass(xTrain,fpass,1/ts);
+
+
 
 [dof, N] = size(xTrain');
 yTrain  = yTrain(:,1)';
 xTrain  = xTrain';
-xSp = xTrain;
+fileName = 'SetpointSignal.mat';
+load(fileName)
+xSp     = Setpoint(1:180000-4999,:)';
+xSp     = xSp*180/pi;
+
+xSp = xTrain; 
+
 %xSp(3,:)  = movmean(xTrain(3,:),5);
 
-T       = [[0:N-1]*Ts];       % Time 
+T       = [[0:N-1]*ts];       % Time 
 
 %Normalize data
 % X
 mu_X   = mean(xTrain');
 sig_X  = std(xTrain');
-xTrain = ((xTrain' - mu_X) ./ sig_X)';
-xSp    = ((xSp' - mu_X) ./ sig_X)';
+%xTrain = ((xTrain' - mu_X) ./ sig_X)';
+%xSp    = ((xSp' - mu_X) ./ sig_X)';
 %xSp(:,1:3) = [];
 
 % Y
 mu_Y   = mean(yTrain');
 sig_Y  = std(yTrain');
-yTrain = ((yTrain' - mu_Y) ./ sig_Y)';
+%yTrain = ((yTrain' - mu_Y) ./ sig_Y)';
 
 %% (Hyper)parameters 
 %Hyperparameters 
 sn  = 6;          % Noise variance
-sf   = 500;           % Signal variance
-l    = [ones(1,dof)];   % characteristic lengthscale
+sf  = 100;           % Signal variance
+
+%Hyperparameters (GOOD)
+sf = 101.81 
+sn = 1.4493 
+l  = [2.53 62.62 784.53]
+
 %Combine into 1 vector
 hyp  = [sf,l];
 
@@ -62,7 +67,8 @@ i_f = [1:250];
 i_u = [1:5:i_f(end)];
 i_s = i_f;
 i_loop  = [i_f(end)+1:1001];
-i_loop  = 1001:10000;
+i_loop  = 1001:35000;
+i_loop  = 1001:N-100;
 
 f  = xTrain(:,i_f)';
 u  = xTrain(:,i_u)';
@@ -75,6 +81,7 @@ yloop   = yTrain(:,i_loop)';
 
 Mf  = length(i_f);
 %% Hyperparameter optimization
+%{
 fprintf('Updating hyperparameters...')
 options = optimset;
 options.Display = 'final';
@@ -83,9 +90,9 @@ options.MaxIter = 500;
 [hyp_sn nlml] = fminsearch(@(hyp) nlml_I_FITC(hyp, u, f, yf, 'VFE'),[hyp,sn],options);
 hyp = abs(hyp_sn(1:end-1));
 sn  = abs(hyp_sn(end));
+%}
 sn2 = sn^2;
 sn_old = sn;
-%}
 
 options.MaxIter = 20;
 fprintf('  ----  Incremental FITC - Bijl2015  ----  \n')
@@ -104,7 +111,6 @@ iTest = zeros(1,length(i_loop));
 Nkeep = 20;
 Nremove = size(u,1)-Nkeep;
 [u,Kuu,Lu,mu_u,var_u,Mu] = updateInducing(hyp,sn,u,mu_u,var_u,Kuu,u(Nremove,:),Nremove);
-
 
 fprintf('Expected simulation time: %.3f seconds ...\n',length(i_loop)*1e-3)
 tic
@@ -138,12 +144,12 @@ for jj = i_loop
     yfp = yTrain(:,jj)';    % New training point
     
     % Update inducing points
-    if mod(jj,10) == 0
-        [u,Kuu,Lu,mu_u,var_u,Mu] = updateInducing(hyp,sn,u,mu_u,var_u,Kuu,xTrain(:,jj-100:jj)',1);
-    end
-    %if mod(jj,1) == 0
-        [u,Kuu,Lu,mu_u,var_u,Mu] = updateInducing(hyp,sn,u,mu_u,var_u,Kuu,uNew,0);
+    %if mod(jj,100) == 0
+    %    [u,Kuu,Lu,mu_u,var_u,Mu] = updateInducing(hyp,sn,u,mu_u,var_u,Kuu,xTrain(:,jj-100:jj)',1);
     %end
+    if mod(jj,250) == 0
+        [u,Kuu,Lu,mu_u,var_u,Mu] = updateInducing(hyp,sn,u,mu_u,var_u,Kuu,uNew,0);
+    end
        
     % Make prediction
     [mu, var ,mu_u,var_u] = IncrementalFITC(hyp,sn,u,sNew,fp,yfp,mu_u,var_u,Lu,Kuu);
@@ -182,7 +188,11 @@ sn     = sqrt(sn.^2*sig_Y);
 %}
 
 %% Results
-fSize = 12;
+fontSize   = 8;
+labelSize  = 11;
+legendSize = 8;
+M = length(i_loop);
+
 resultsIFITC = figure(2);clf(resultsIFITC);
 %{
 sphandle(1,1) = subplot(2,1,1);
@@ -202,24 +212,47 @@ ylabel('y','Interpreter','Latex','FontSize',fSize+4)
 hold off
 clear ha
 %}
-sphandle(1,1) = subplot(1,1,1);
+sphandle(1,1) = subplot(2,1,1);
+set(gca,'FontSize',fontSize);
 hold on
-han(1) = scatter(T(1,i_f),yf(:,1),'xk');
-han(1).MarkerFaceAlpha = .6;
-han(1).MarkerEdgeAlpha = .6;
-han(2) = scatter(T(1,i_loop),yloop(:,1),'xb');
-han(3) = plot(iTest*Ts,pred,'r','LineWidth',1.5);
+%han(1) = scatter(T(1,i_f),yf(:,1),'xk');
+han(1) = plot(T(1,i_loop(1:M)),yloop(1:M),'-','LineWidth',1.5,'MarkerSize',3);
+han(2) = plot(iTest*ts,pred,'--k','LineWidth',1);
 %scatter(u(:,1),zeros(Mu,1))
-han(4) = plot(iTest*Ts,pred + 2*sqrt(vari+sn^2),'k');
-plot(iTest*Ts,pred - 2*sqrt(vari+sn^2),'k');
+%han(4) = plot(iTest*Ts,pred + 2*sqrt(vari+sn^2),'k');
+%plot(iTest*Ts,pred - 2*sqrt(vari+sn^2),'k');
 %legend(han,'Initial data','Incremental data','t+1 predictions',...
-%    'Predictive var.','Interpreter','Latex','FontSize',fSize);
-ylabel('y','Interpreter','Latex','FontSize',fSize+4)
-xlabel('t (s)','Interpreter','Latex','FontSize',fSize+4)
-title('Incremental FITC - Bijl2015','Interpreter','Latex','FontSize',fSize+8)
+%    'Predictive var.','Interpreter','Latex','FontSize',legendSize);
+ylabel('(mA)','Interpreter','Latex','FontSize',labelSize)
+xlabel('t (s)','Interpreter','Latex','FontSize',labelSize)
+%title('Incremental FITC - Bijl2015','Interpreter','Latex','FontSize',fontSize+8)
+%legend(han,'$y$','$\mu_{*,t+1}$','Interpreter','Latex')
+xlim([1 35])
 hold off
 clear ha han
-[resultsIFITC,sphandle] = subplots(resultsIFITC,sphandle);
+
+sphandle(2,1) = subplot(2,1,2);
+set(gca,'FontSize',fontSize);
+hold on
+%han(1) = scatter(T(1,i_f),yf(:,1),'xk');
+han(1) = plot(T(1,i_loop(1:M)),yloop(1:M),'-','LineWidth',1.5,'MarkerSize',3);
+han(2) = plot(iTest*ts,pred,'--k','LineWidth',1);
+%scatter(u(:,1),zeros(Mu,1))
+%han(4) = plot(iTest*Ts,pred + 2*sqrt(vari+sn^2),'k');
+%plot(iTest*Ts,pred - 2*sqrt(vari+sn^2),'k');
+%legend(han,'Initial data','Incremental data','t+1 predictions',...
+%    'Predictive var.','Interpreter','Latex','FontSize',legendSize);
+ylabel('(mA)','Interpreter','Latex','FontSize',labelSize)
+xlabel('t (s)','Interpreter','Latex','FontSize',labelSize)
+%title('Incremental FITC - Bijl2015','Interpreter','Latex','FontSize',fontSize+8)
+legend(han,'$y$','$\mu_{*,t+1}$','Interpreter','Latex')
+xlim([18.2 18.65])
+ylim([-21 8])
+hold off
+clear ha han
+
+%[resultsIFITC,sphandle] = subplots(resultsIFITC,sphandle);
+set(gcf,'PaperSize',[8.4 8.4*3/4+0.1],'PaperPosition',[0+0.3 0.2 8.4+0.3 8.4*3/4+0.2])
 
 %% Error
 error = rms(mu_s' - yTrain(1,i_s));
@@ -237,4 +270,12 @@ fprintf('nRMS error:  Incremental FITC: %f \n',error)
 
 %% Run other scripts
 I_SSGP_LOOP
-SSGP_LOOP
+%SSGP_LOOP
+
+saveFig = 0
+if saveFig == 1
+    saveas(resultsIFITC,fullfile(pwd,'Images','loopIFITC.pdf'))
+    saveas(resultsISSGP,fullfile(pwd,'Images','loopISSGP.pdf'))
+    saveas(resultsSSGP,fullfile(pwd,'Images','loopSSGP.pdf'))
+    pdf2ipepdf_v2(fullfile(pwd,'Images'),{''},{''})
+end

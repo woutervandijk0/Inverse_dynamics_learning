@@ -55,8 +55,8 @@ addOptional(p,'fig',defaultFig,@islogical);
 addOptional(p,'figNum',defaultFigNum,@(x) x>=0 );
 
 parse(p,varargin{:});
-filename = p.Results.dataset;       %name of dataset
-figNum = p.Results.figNum;       %name of dataset
+filename = p.Results.dataset;       % Name of dataset
+figNum   = p.Results.figNum;          % Figure number
 %% Force user to select a dataset if not selected already
 datafolder = 'C:\Users\wout7\OneDrive - student.utwente.nl\ME - Master\Thesis\Data\';
 if strcmp(filename,defaultDatasetName)== 1

@@ -1,8 +1,10 @@
 %% Data selection
-i_f = [1:500];
-i_s = [1:10:500];
-i_loop  = [600:700];
-i_plot  = [1:1000];
+i_f = [1:200];
+i_s = [1:1:700];
+i_loop  = [200:400];
+i_plot  = [1:700];
+i_total = [i_f,i_loop];
+
 
 f  = xTrain(:,i_f)';
 s  = xTrain(:,i_s)';
@@ -17,7 +19,7 @@ yloop = yTrain(:,i_loop)';
 %% I-SSGP
 fprintf('  ----  Incremental Sparse Spectrum GP - Bijl2015  ----   \n')
 % Number of random features
-D = 100;   
+D = 50;   
 sn2 = sn.^2;
 
 % Preallocate vectors and matrices
@@ -76,16 +78,18 @@ end
 clear ha
 resultsISSGP = figure(3); clf(resultsISSGP)
 sphandle(1,1) = subplot(2,1,1);
+set(gca,'FontSize',fontSize);
 hold on
-ha(2) = scatter(f(:,1),yf(:,1),'xb');
-ha(1) = plot(xTrain(1,i_plot),yTrue(1,i_plot),'-k','LineWidth',1.5);
-ha(3) = plot(s(:,1),mu_s,'r','LineWidth',1.5);
+ha(2) = plot(f(:,1),yf(:,1),'x','MarkerSize',2);
+ha(1) = plot(xTrain(1,i_plot),yTrue(1,i_plot),'-k','LineWidth',1);
+ha(3) = plot(s(:,1),mu_s,'-','LineWidth',1.5);
 ha(4) = plot(s(:,1),mu_s + 2*sqrt(var_s+sn2),'k');
         plot(s(:,1),mu_s - 2*sqrt(var_s+sn2),'k');
-legend(ha,'True function','Incr. data','Predicted mean',...
-    'Predictive var.','Interpreter','Latex','FontSize',fSize);
-title('Incremental Sparse Spectrum GP - Gijsberts2013','Interpreter','Latex','FontSize',fSize+8)
-ylabel('y','Interpreter','Latex','FontSize',fSize+4)
+legend(ha,'$f_\mathrm{true}$','y','$\mu_{*}$','$\Sigma_{*}$','Interpreter','Latex','FontSize',legendSize);
+title('Incremental Sparse Spectrum GP - Gijsberts2013','Interpreter','Latex','FontSize',fontSize+8)
+ylabel('y','Interpreter','Latex','FontSize',labelSize)
+ylim([-5 5])
+xlim([0 2.7])
 hold off
 clear ha
 
@@ -132,22 +136,24 @@ fprintf('                per iteration: %f ms \n',t_run/1e-3)
 
 %% Plot results
 sphandle(2,1) = subplot(2,1,2);
+set(gca,'FontSize',fontSize);
 hold on
-ha(2) = scatter(f(:,1),yf(:,1),'xk');
-ha(2).MarkerFaceAlpha = .6;
-ha(2).MarkerEdgeAlpha = .6;
-ha(3) = scatter(loop(:,1),yloop(:,1),'xb');
-ha(1) = plot(xTrain(1,i_plot),yTrue(1,i_plot),'-k','LineWidth',1.5);
-ha(4) = plot(s(:,1),mu_s,'r','LineWidth',1.5);
-ha(5) = plot(s(:,1),mu_s + 2*sqrt(var_s+sn2),'k');
+%ha(2) = plot(f(:,1),yf(:,1),'xk','MarkerSize',1);
+ha(2) = plot(loop(:,1),yloop(:,1),'x','MarkerSize',2);
+ha(1) = plot(xTrain(1,i_plot),yTrue(1,i_plot),'-k','LineWidth',1);
+ha(3) = plot(s(:,1),mu_s,'-','LineWidth',1.5);
+ha(4) = plot(s(:,1),mu_s + 2*sqrt(var_s+sn2),'k');
         plot(s(:,1),mu_s - 2*sqrt(var_s+sn2),'k');
-legend(ha,'True function','Incr. data','Incr. data','Predicted mean',...
-    'Predictive var.','Interpreter','Latex','FontSize',fSize);
-ylabel('y','Interpreter','Latex','FontSize',fSize+4)
+%legend(ha,'$f_\mathrm{true}$','y','$\mu_{*}$','$\Sigma_{*}$','Interpreter','Latex','FontSize',legendSize);
+ylabel('y','Interpreter','Latex','FontSize',labelSize)
+xlabel('t (s)','Interpreter','Latex','FontSize',labelSize)
+ylim([-5 5])
+xlim([0 2.7])
 hold off
 clear ha
 
-[resultsISSGP,sphandle] = subplots(resultsISSGP,sphandle);
+[resultsISSGP,sphandle] = subplots(resultsISSGP,sphandle,'gabSize',[0.09, 0.04]);
+set(gcf,'PaperSize',[8.4 8.4*3/4+0.1],'PaperPosition',[0 0.2 8.4 8.4*3/4+0.2])
 
 %% Error
 error = rms(mu_s - yTrain(1,i_s)');

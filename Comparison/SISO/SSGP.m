@@ -8,9 +8,14 @@ alpha  = 0.5;   % VFE,  alpha = 0
 
 fprintf('  ----  Streaming sparse GP - Bui2015  ----  \n')
 %% (Offline) Streaming Sparse Gaussian Process (initial step)
-i_f = 1:500;
-i_s = [1:10:500];
-i_b = [1:10:500];
+i_f = [1:200];
+i_loop  = [200:400];
+i_plot  = [1:700];
+i_total = [i_f,i_loop];
+
+i_f = 1:200;
+i_b = [1:15:200];
+i_s = [i_plot];
 
 %a  = xTrain(i_a)';      % Old inducing points
 b  = xTrain(:,i_b)';     % New inducing points
@@ -37,7 +42,6 @@ Kbs     = SEcov(b,s,hyp);
 
 Lb          = chol(Kbb,'lower');
 Lbinv_Kbf   = solve_lowerTriangular(Lb,Kbf);
-
 Lbinv_Kbs   = solve_lowerTriangular(Lb, Kbs);
 
 Qfdiag      = Kfdiag - diag(Lbinv_Kbf'*Lbinv_Kbf);
@@ -55,7 +59,6 @@ Sinv_y          = (yf./Dff')';
 c               = Lbinv_Kbf*Sinv_y;
 LDinv_Lbinv_Kbf_c  = LDinv_Lbinv_Kbf*Sinv_y;
 LDinv_c         = solve_lowerTriangular(LD,c);
-
 
 %% Approximate log marginal Likelihood
 %{
@@ -87,43 +90,59 @@ Su   = var1 + var2 + var3;
 
 %Prediction variance (vector)
 var  = diag(Su);
-toc
+timer1 = toc;
 %% Plot result 
 resultsSSGP = figure(2); clf(2);
 sphandle(1,1) = subplot(2,1,1);
+set(gca,'FontSize',fontSize);
 hold on
-ha(2) = scatter(f(:,1),yf,'xb');
-ha(2).MarkerFaceAlpha = .6;
-ha(2).MarkerEdgeAlpha = .6;
-ha(3) = scatter(b(:,1),zeros(size(b,1),1),ones(size(b,1),1)*10,'ok','filled');
-ha(1) = plot(xTrain(1,i_plot),yTrue(i_plot,1),'k','LineWidth',1.5);
-ha(4) = plot(s(:,1),m,'-r','LineWidth',2);
+ha(2) = plot(f(:,1),yf,'x','MarkerSize',2);
+ha(3) = plot(b(:,1),zeros(size(b,1),1),'ok','MarkerFaceColor','k','MarkerSize',1);
+ha(1) = plot(xTrain(1,i_plot),yTrue(i_plot,1),'k','LineWidth',1);
+ha(4) = plot(s(:,1),m,'-','LineWidth',1.5);
 ha(5) = plot(s(:,1),m + 2*sqrt(var+sn2),'-k');
         plot(s(:,1),m - 2*sqrt(var+sn2),'-k');
-ylabel('y','Interpreter','Latex','FontSize',fSize+4);
-title('Streaming Sparse GP - Bui2017','Interpreter','Latex','FontSize',fSize+8);
-legend(ha,'True function','Data in window','Inducing points','Predicted mean',...
-    'Predictive var.','Interpreter','Latex','FontSize',fSize);
+ylabel('y','Interpreter','Latex','FontSize',labelSize);
+title('Streaming Sparse GP - Bui2017','Interpreter','Latex','FontSize',fontSize+8);
+legend(ha,'$f_\mathrm{true}$','$y$','$\mathbf{u}$','$\mu_{*}$','$\Sigma_{*}$','Interpreter','Latex','FontSize',legendSize);
+ylim([-5 5])
+xlim([0 2.7])
 hold off
 
+%% Recalculate predictions at inducing points b
+tic;
+i_s = [i_b];
+s  = xTrain(:,i_s)';     % Test points
+ys = yTrain(i_s)';
+Kbs     = SEcov(b,s,hyp);
+Lbinv_Kbs   = solve_lowerTriangular(Lb, Kbs);
+LDinv_Lbinv_Kbs = solve_lowerTriangular(LD, Lbinv_Kbs);
 
-sphandle(2,1) = subplot(2,1,2);
-hold on
-han(3) = scatter(f(:,1),yf,'xk');
-han(3).MarkerFaceAlpha = .5; 
-han(3).MarkerEdgeAlpha = .5;
-hold off
+% Prediction 
+%Predictive mean
+%m = LDinv_Lbinv_Kbs'*LDinv_Lbinv_Kbf_c;
+m = LDinv_Lbinv_Kbs'*LDinv_c;
+
+%Prediction variance (matrix)
+Ms = length(s);
+Kss  = SEcov(s,s,hyp) + eye(Ms)*jitter;
+var1 = Kss;
+var2 = -Lbinv_Kbs'*Lbinv_Kbs;
+var3 = LDinv_Lbinv_Kbs'*LDinv_Lbinv_Kbs;
+Su   = var1 + var2 + var3;
+
+%Prediction variance (vector)
+var  = diag(Su);
 
 %% Online Streaming Sparse Gaussian Process
-i_f = 600:700;
-i_s = [1:700];
+i_f = i_loop;
+i_s = i_plot;
 f   = xTrain(:,i_f)';     % Training points
 s   = xTrain(:,i_s)';     % Test points
 a   = b;
 yf  = yTrain(i_f)';
 ys  = yTrain(i_s)';
 
-tic;
 M       = length(a);
 M_old   = floor(0.7*M);
 M_new   = M - M_old;
@@ -142,7 +161,7 @@ ma  = m;
 Kaa_old = Kbb;
 Kfdiag  = diag(SEcov(f,f,hyp));
 Kbf     = SEcov(b,f,hyp);
-Kbb     = SEcov(b,b,hyp) + eye(Ma)*jitter;
+Kbb     = SEcov(b,b,hyp) + eye(Mb)*jitter;
 Kba     = SEcov(b,a,hyp);
 Kaa_cur = SEcov(a,a,hyp) + eye(Ma)*jitter;
 Kaa     = Kaa_old + eye(Ma)*jitter;
@@ -217,28 +236,34 @@ Su  = var1 + var2 + var3;
 var = diag(Su);
 
 
-timer = toc;
+timer2 = toc;
+t_run = (timer1+timer2)/iter;
 fprintf('Number of inducing points:     %i\n',Mu);
-fprintf('Elapsed time:           total: %.5f ms\n',timer/1e-3)
+fprintf('Elapsed time:           total: %.5f ms\n',(timer1+timer2)/1e-3)
+fprintf('                per iteration: %f ms \n',t_run/1e-3);
+
 
 %% Plot results
 resultsSSGP;
-sphandle(2,1);
+sphandle(2,1) = subplot(2,1,2);
+set(gca,'FontSize',fontSize);
 hold on
-han(2) = plot(f(:,1),yf,'xb');
-han(4) = scatter(b(:,1),zeros(size(b,1),1),ones(size(b,1),1)*10,'ok','filled');
-han(1) = plot(xTrain(1,i_plot),yTrue(i_plot,1),'k','LineWidth',1.5);
-han(5) = plot(s(:,1),m,'-r','LineWidth',2);
-han(6) = plot(s(:,1),m + 2*sqrt(var + sn2),'-k');
+han(2) = plot(f(:,1),yf,'x','MarkerSize',2);
+han(3) = plot(b(:,1),zeros(size(b,1),1),'ok','MarkerFaceColor','k','MarkerSize',1);
+han(1) = plot(xTrain(1,i_plot),yTrue(i_plot,1),'k','LineWidth',1);
+han(4) = plot(s(:,1),m,'-','LineWidth',1.5);
+han(5) = plot(s(:,1),m + 2*sqrt(var + sn2),'-k');
          plot(s(:,1),m - 2*sqrt(var + sn2),'-k');
-legend(han,'True function','Data in window','Data outside window',...
-    'Inducing points','Predicted mean','Predictive var.','Interpreter','Latex','FontSize',fSize);
+%legend(han,'$f_\mathrm{true}$','$y$','$\mathbf{u}$','$\mu_{*}$','$\Sigma_{*}$','Interpreter','Latex','FontSize',legendSize);
 %xlim([0,4]);
-xlabel('t (s)','Interpreter','Latex','FontSize',fSize+4);
-ylabel('y','Interpreter','Latex','FontSize',fSize+4);
+xlabel('t (s)','Interpreter','Latex','FontSize',labelSize);
+ylabel('y','Interpreter','Latex','FontSize',labelSize);
+ylim([-5 5])
+xlim([0 2.7])
 hold off
 
-[resultsSSGP,sphandle] = subplots(resultsSSGP,sphandle);
+[resultsSSGP,sphandle] = subplots(resultsSSGP,sphandle,'gabSize',[0.09, 0.04]);
+set(gcf,'PaperSize',[8.4 8.4*3/4+0.1],'PaperPosition',[0 0.2 8.4 8.4*3/4+0.2])
 
 %% Error
 error = rms(m - yTrain(i_s,1));

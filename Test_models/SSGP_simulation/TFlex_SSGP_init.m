@@ -8,12 +8,13 @@ t_end       = 200;        %[s] Total simulation time
 t_still     = 10;          %[s] Standstill time at beginning
 t_predict   = 20; %[s] Make predictions
 t_learn     = 15;
-t_hypUpdate = [10 100];    %[s] [start stop] hyperparameter optimization
+t_hypUpdate = [t_end t_end];    %[s] [start stop] hyperparameter optimization
 
 %% Initialize Controller & Plant settings
 Tflex_Controller_init
 
 %% Load dataset:
+
 dataID = 'TFlexSimulation_RN20.mat';
 %dataID = 'TFlexADRC_RN20.mat';
 
@@ -36,19 +37,16 @@ mu_Y   = mean(yTrain');
 sig_Y  = std(yTrain');
 yTrain = ((yTrain' - mu_Y) ./ sig_Y)';
 
-%% Noise calculation
-i_still = t_still/ts;
-signal  = yTrain(1:i_still);
-sn_measured = rms(signal);
-
-fprintf('\n')
-fprintf('Noise (RMS): %f mA\n',sn_measured)
-
 %% (Hyper)parameters 
 %Hyperparameters 
 sn   =  0.0160;          % Noise variance
 sf   = 0.1;           % Signal variance
 l    = [ones(1,dof)]*0.1;   % characteristic lengthscale
+
+sf = 101.81;
+sn = 1.4493;
+l  = [2.53 62.62 784.53];
+
 %Combine into 1 vector
 hyp  = [sf,l];
 
@@ -57,7 +55,7 @@ hyp  = [sf,l];
 %hyp = [6.8267    5.2009    4.1005    2.9591];
 
 ts_opti = ts*1000;       % [s]  Sample time of hyperparameter optimization
-bufferSize   = 25;       % Number of stored datapoints
+bufferSize   = 50;       % Number of stored datapoints
 bufferResamp = 50;       % Downsampling ratio before storing date
 Z = bufferSize*bufferResamp; 
 bufferLength = Z*ts;     % [s] Length of window
@@ -113,7 +111,7 @@ bound = bound - 0.5*(1-alpha)/alpha * sum(log(Dff./sn));
 bound = -bound
 %}
 %Optimization exluding signal noise
-%
+%{
 %[hyp_sn nlml] = fminsearch(@(hyp) nlml_I_FITCv2(hyp, sn, u, f, yf, 'FITC'),hyp,options);
 [hyp_sn nlml] = fminsearch(@(hyp) sgpNLML(hyp,alpha,f,yf',u,s,yf,Mf),[hyp,sn],options);
 hyp = abs(hyp_sn(1:end-1));

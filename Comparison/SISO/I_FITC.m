@@ -1,12 +1,12 @@
 clear all, clc
 
-%fromData
+saveFig = 1;
 
 %% (Hyper)parameters 
 %Hyperparameters 
 l   = 0.1;        % characteristic lengthscale
 sf  = 1;         % Signal variance
-sn  = 0.1;       % Noise variance
+sn  = 0.5;       % Noise variance
 sn2 = sn^2;
 hyp = [sf,l];
 
@@ -63,12 +63,12 @@ sn2    = sn^2;
 
 fprintf('  ----  Incremental FITC - Bijl2015  ----  \n')
 %% Data selection
-i_f = [1:500];
-i_u = [1:10:500];
-i_s = [1:10:500];
-i_loop  = [600:700];
-i_plot  = [1:1000];
-i_total = [1:500,600:700];
+i_f = [1:200];
+i_u = [1:15:200];
+i_s = [1:1:700];
+i_loop  = [200:400];
+i_plot  = [1:700];
+i_total = [i_f,i_loop];
 
 f  = xTrain(:,i_f)';
 u  = xTrain(:,i_u)';
@@ -179,7 +179,6 @@ u_new = u;  % Store for the SSGP algorithm
 %% Update (p indicates plus 1 timestep)
 i_s_copy = i_s;
 
-tic
 iter = 0;
 for jj = i_loop
     i_s = jj+1;
@@ -308,44 +307,52 @@ yloop  = yloop.*sig_Y + mu_Y;
 %}
 
 %% Results
-fSize = 12;
+fontSize   = 8;
+labelSize  = 11;
+legendSize = 8;
+colors = [0,      0.4470, 0.7410;
+          0.8500, 0.3250, 0.0980;
+          0.9290, 0.6940, 0.1250;
+          0.4940, 0.1840, 0.5560];
+
 resultsIFITC = figure(1);clf(resultsIFITC);
 sphandle(1,1) = subplot(2,1,1);
+set(gca,'FontSize',fontSize);
 hold on
-ha(2) = scatter(f(:,1),yf(:,1),'xb');
-%ha(2).MarkerFaceAlpha = .6;
-%ha(2).MarkerEdgeAlpha = .6;
+ha(2) = plot(f(:,1),yf(:,1),'x','MarkerSize',2);
+ha(3) = plot(u_old(:,1),zeros(size(u,1),1),'ok','MarkerFaceColor','k','MarkerSize',1);
 ha(1) = plot(xTrain(1,i_plot),yTrue(1,i_plot),'-k','LineWidth',1.5);
-ha(4) = plot(s(1,:),mu_1,'r','LineWidth',1.5);
+ha(4) = plot(s(1,:),mu_1,'-','LineWidth',1,'LineWidth',1.5);
 ha(5) = plot(s(1,:),mu_1 + 2*sqrt(diag(var_1+sn2)),'k');
 plot(s(1,:),mu_1 - 2*sqrt(diag(var_1+sn2)),'k');
-ha(3) = scatter(u_old(:,1),zeros(size(u,1),1),ones(size(u,1),1)*10,'ok','filled');
-legend(ha,'True function','Initial data','Inducing points','Predicted mean',...
-    'Predictive var.','Interpreter','Latex','FontSize',fSize);
-title('Incremental FITC - Bijl2015','Interpreter','Latex','FontSize',fSize+8)
-ylabel('y','Interpreter','Latex','FontSize',fSize+4)
+legend(ha,'$f_\mathrm{true}$','$y$','$\mathbf{u}$','$\mu_{*}$','$\Sigma_{*}$','Interpreter','Latex','FontSize',legendSize);
+title('Incremental FITC - Bijl2015','Interpreter','Latex','FontSize',fontSize+8)
+ylabel('y','Interpreter','Latex','FontSize',labelSize)
+ylim([-5 5])
+xlim([0 2.7])
 hold off
 clear ha
 
 sphandle(2,1) = subplot(2,1,2);
+set(gca,'FontSize',fontSize);
 hold on
-ha(2) = scatter(f(:,1),yf,'xk');
-ha(2).MarkerFaceAlpha = .6;
-ha(2).MarkerEdgeAlpha = .6;
-ha(3) = scatter(loop(:,1),yloop,'xb');
-ha(1) = plot(xTrain(1,i_plot),yTrue(1,i_plot),'-k','LineWidth',1.5);
-ha(5) = plot(s2(:,1),mu_s,'-r','LineWidth',1.5);
-ha(6) = plot(s2(:,1),mu_s + 2*sqrt(diag(var_s+sn2)),'k');
+%ha(2) = plot(f(:,1),yf,'+g','MarkerSize',2);
+ha(2) = plot(loop(:,1),yloop,'x','MarkerSize',2);
+ha(1) = plot(xTrain(1,i_plot),yTrue(1,i_plot),'-k','LineWidth',1);
+ha(3) = plot(u(:,1),zeros(size(u,1),1),'ok','MarkerFaceColor','k','MarkerSize',1);
+ha(4) = plot(s2(:,1),mu_s,'-','LineWidth',1.5);
+ha(5) = plot(s2(:,1),mu_s + 2*sqrt(diag(var_s+sn2)),'k');
 plot(s2(:,1),mu_s - 2*sqrt(diag(var_s+sn2)),'k');
-ha(4) = scatter(u(:,1),zeros(size(u,1),1),ones(size(u,1),1)*10,'ok','filled');
-ylabel('y','Interpreter','Latex','FontSize',fSize+4)
-xlabel('t (s)','Interpreter','Latex','FontSize',fSize+4)
-legend(ha,'True function','Initial data','Incremental data',...
-    'Inducing points','Predicted mean','Predictive var.',...
-'Interpreter','Latex','FontSize',fSize);
+ylabel('y','Interpreter','Latex','FontSize',labelSize)
+xlabel('t (s)','Interpreter','Latex','FontSize',labelSize)
+%legend(ha,'$f_\mathrm{true}$','$y$','$\mathbf{u}$','$\mu_{*}$','$\Sigma_{*}$','Interpreter','Latex','FontSize',legendSize);
+ylim([-5 5])
+xlim([0 2.7])
 hold off
 clear ha han
-[resultsIFITC,sphandle] = subplots(resultsIFITC,sphandle);
+
+[resultsIFITC,sphandle] = subplots(resultsIFITC,sphandle,'gabSize',[0.09, 0.04]);
+set(gcf,'PaperSize',[8.4 8.4*3/4+0.1],'PaperPosition',[0 0.2 8.4 8.4*3/4+0.2])
 
 %% Error
 error = rms(mu_s - yTrain(1,i_s)');
@@ -358,4 +365,14 @@ fprintf('            measured interval: %f \n\n',error)
 %Run incremental Sparse Spectrum GP script
 I_SSGP
 %Run Streaming Sparse GP script
-%SSGP
+SSGP
+
+%% Save Figure
+saveFig = 0;
+if saveFig == 1
+    saveas(resultsIFITC,fullfile(pwd,'Images','I_FITC_SISO.pdf'))
+    saveas(resultsISSGP,fullfile(pwd,'Images','I_SSGP_SISO.pdf'))
+    saveas(resultsSSGP,fullfile(pwd,'Images','SSGP_SISO.pdf'))
+    
+    pdf2ipepdf_v2(fullfile(pwd,'Images'),{''},{''})
+end

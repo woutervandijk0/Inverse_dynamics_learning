@@ -1,5 +1,5 @@
 clear pred vari
-fprintf('  ----  Streaming sparse GP - Bui2015  ----  \n')
+fprintf('\n  ----  Streaming sparse GP - Bui2015  ----  \n')
 %% Settings 
 Z = 1;    % Size of floating frame
 windowSize = 50;
@@ -7,6 +7,13 @@ windowSize = 50;
 alpha = 0.001;    % VFE,  alpha = 0
                 % SPEP, 0 < alpha < 1
                 % FITC, alpha = 1
+                
+%% Adjust hyperparameters
+sn = 1.4493;
+l  = [2.4603    5.3388   38.3639];
+sf = 20.6309;
+
+hyp = [sf, l];
 %% Normalize data
 %{
 % X
@@ -90,18 +97,20 @@ for jj = i_loop(1:Z:end)
     Kaa_old = SEcov(a,a,hyp);
     %[X,NORM,minNorm,n,indUpdate] = lhcUpdate(xTrain,X,NORM,minNorm,n,Z,init)
     
-   % update inducing points
+    % update inducing points
+    if mod(jj,250) == 0
         i_del = randi(Mb,1,1); i_new = 1;
         b(1:end-1,:)  = b([1:i_del-1,i_del+1:end],:);       % Remove from inducing points
         b(end,:) = uNew(i_new,:);
-%     
+    end
+%
 %     i_new = 1;
 %     i_b = (jj-250)+randi(250,Mb,1)';
 %     b    = xTrain(:,i_b)';
 %     b(end,:) = uNew(i_new,:);
     
     %% Hyperparameter update
-    %
+    %{
     if mod(jj,500) == 0
     i_f = jj-1000:2:jj;
     f   = xTrain(:,i_f)';
@@ -178,7 +187,7 @@ sn     = sqrt(sn.^2*sig_Y);
 
 %% Results
 fSize = 12;
-resultsIFITC = figure(4);clf(resultsIFITC);
+resultsSSGP = figure(4);clf(resultsSSGP);
 %{
 sphandle(1,1) = subplot(2,1,1);
 hold on
@@ -198,24 +207,48 @@ hold off
 clear ha
 %}
 
-sphandle(1,1) = subplot(1,1,1);
+sphandle(1,1) = subplot(2,1,1);
+set(gca,'FontSize',fontSize);
 hold on
-han(2) = scatter(T(1,i_f),yf(:,1),'xk');
-han(2).MarkerFaceAlpha = .6;
-han(2).MarkerEdgeAlpha = .6;
-han(1) = scatter(T(1,i_loop),yloop(:,1),'xb');
-han(3) = plot(iTest*Ts,pred,'r','LineWidth',1.5);
+%han(1) = scatter(T(1,i_f),yf(:,1),'xk');
+han(1) = plot(T(1,i_loop(1:M)),yloop(1:M),'-','LineWidth',1.5,'MarkerSize',3);
+han(2) = plot(iTest*ts,pred,'--k','LineWidth',1);
 %scatter(u(:,1),zeros(Mu,1))
-han(4) = plot(iTest*Ts,pred + (vari+sn^2),'k');
-plot(iTest*Ts,pred - (vari+sn^2),'k');
-legend(han,'Initial data','Incremental data','t+1 predictions',...
-    'Predictive var.','Interpreter','Latex','FontSize',fSize);
-ylabel('y','Interpreter','Latex','FontSize',fSize+4)
-xlabel('t (s)','Interpreter','Latex','FontSize',fSize+4)
-title('Streaming Sparse GP - Bui2017','Interpreter','Latex','FontSize',fSize+8);
+%han(4) = plot(iTest*Ts,pred + 2*sqrt(vari+sn^2),'k');
+%plot(iTest*Ts,pred - 2*sqrt(vari+sn^2),'k');
+%legend(han,'Initial data','Incremental data','t+1 predictions',...
+%    'Predictive var.','Interpreter','Latex','FontSize',legendSize);
+ylabel('(mA)','Interpreter','Latex','FontSize',labelSize)
+xlabel('t (s)','Interpreter','Latex','FontSize',labelSize)
+%title('Incremental FITC - Bijl2015','Interpreter','Latex','FontSize',fontSize+8)
+%legend(han,'$y$','$\mu_{*,t+1}$','Interpreter','Latex')
+xlim([1 35])
 hold off
 clear ha han
-[resultsIFITC,sphandle] = subplots(resultsIFITC,sphandle);
+
+sphandle(2,1) = subplot(2,1,2);
+set(gca,'FontSize',fontSize);
+hold on
+%han(1) = scatter(T(1,i_f),yf(:,1),'xk');
+han(1) = plot(T(1,i_loop(1:M)),yloop(1:M),'-','LineWidth',1.5,'MarkerSize',3);
+han(2) = plot(iTest*ts,pred,'--k','LineWidth',1);
+%scatter(u(:,1),zeros(Mu,1))
+%han(4) = plot(iTest*Ts,pred + 2*sqrt(vari+sn^2),'k');
+%plot(iTest*Ts,pred - 2*sqrt(vari+sn^2),'k');
+%legend(han,'Initial data','Incremental data','t+1 predictions',...
+%    'Predictive var.','Interpreter','Latex','FontSize',legendSize);
+ylabel('(mA)','Interpreter','Latex','FontSize',labelSize)
+xlabel('t (s)','Interpreter','Latex','FontSize',labelSize)
+%title('Incremental FITC - Bijl2015','Interpreter','Latex','FontSize',fontSize+8)
+legend(han,'$y$','$\mu_{*,t+1}$','Interpreter','Latex')
+xlim([18.2 18.65])
+ylim([-21 8])
+hold off
+clear ha han
+
+set(gcf,'PaperSize',[8.4 8.4*3/4+0.1],'PaperPosition',[0+0.3 0.2 8.4+0.3 8.4*3/4+0.2])
+
+%[resultsSSGP,sphandle] = subplots(resultsSSGP,sphandle);
 
 %% Hyperparameters
 figure(5),clf(5)

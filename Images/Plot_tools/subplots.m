@@ -21,6 +21,7 @@ gabSize = p.Results.gabSize;
 xMargin  = p.Results.xMargin;
 yMargin  = p.Results.yMargin;        
 xTickLabel  = p.Results.xTickLabel;
+linkAxes = p.Results.linkAxes;
 
 %%
 m       = size(handles,1);
@@ -42,6 +43,6 @@ for i = 1:m
         end
     end
 end
-linkaxes(handles,'x')
+linkaxes(handles,linkAxes)
 set(figure,'Color','White');
 drawnow;

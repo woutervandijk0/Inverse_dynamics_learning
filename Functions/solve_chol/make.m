@@ -58,7 +58,7 @@ end
 fprintf('Done with solve_chol!\n')
 
 %% solve_chol_L
-fprintf('Compiling solve_chol.c ...\n')
+fprintf('Compiling solve_chol_L.c ...\n')
 if OCTAVE                                                               % Octave
   if ismac
                                            % Accelerate framework needed on OS X

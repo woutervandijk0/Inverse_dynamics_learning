@@ -10,7 +10,17 @@ dataID = 'TFlexADRC_RN20.mat';
 %dataID = 'sarcos_inv.mat';
 %dataID = 'BaxterRhythmic.mat';
 %dataID = 'BaxterRand.mat';
-[xTrain, yTrain, Ts] = selectData(dataID,'fig',false);
+%[xTrain, yTrain, Ts] = selectData(dataID,'fig',false);
+
+Ts = 1/1000;
+ts = 1/1000;
+N        = length(SimulinkRealTime.utils.getFileScopeData('TRAINING.DAT').data)
+interval = 20000:(N-5000);
+DATA  = SimulinkRealTime.utils.getFileScopeData('TRAINING.DAT').data(interval,:);
+
+xTrain = DATA(:,1:3);
+yTrain = DATA(:,4);
+
 if strcmp( dataID,'TFlexADRC_RN20_Isp.mat')
     xTrain(1:3,:) = [];
     yTrain(end-3:3,:) = [];
@@ -28,14 +38,14 @@ T       = [[0:N-1]*Ts];       % Time
 % X
 mu_X   = mean(xTrain');
 sig_X  = std(xTrain');
-xTrain = ((xTrain' - mu_X) ./ sig_X)';
-xSp    = ((xSp' - mu_X) ./ sig_X)';
+%xTrain = ((xTrain' - mu_X) ./ sig_X)';
+%xSp    = ((xSp' - mu_X) ./ sig_X)';
 %xSp(:,1:3) = [];
 
 % Y
 mu_Y   = mean(yTrain');
 sig_Y  = std(yTrain');
-yTrain = ((yTrain' - mu_Y) ./ sig_Y)';
+%yTrain = ((yTrain' - mu_Y) ./ sig_Y)';
 
 %% (Hyper)parameters 
 %Hyperparameters 

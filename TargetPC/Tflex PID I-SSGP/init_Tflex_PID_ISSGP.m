@@ -18,13 +18,13 @@ ts = 1/fs;      % [s]  Sample time
 t_switch  = 10; % [s]  Time interval over which the I-SSGP is turned on
 
 %% PID
-I_limit_max = 750; % [mA]   Current limit (Max.)
-I_limit_min = -250;% [mA]   Current limit (Min.)
-gainMotor = 5.56;  % [Nm/A] Motor constant
+I_limit_max =  500; % [mA]   Current limit (Max.)
+I_limit_min = -500;% [mA]   Current limit (Min.)
+gainMotor   = 5.56;  % [Nm/A] Motor constant
 
 crossOver = 15;     %[Hz]
 crossOver = crossOver*2*pi;
-m_eq  = 0.2;     % Equivalent mass
+m_eq  = 0.5;     % Equivalent mass
 alpha = 0.1;%0.119;   % Phase lead
 beta  = 2;       % Integral action
 

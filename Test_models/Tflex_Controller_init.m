@@ -6,17 +6,18 @@ end
 
 %% Reference generator
 Reference.seed  = 35;   % Seed for random integer generator
-Reference.ts    = 1;                % Sample time of setpoint generator
+Reference.ts    = 2.5;                % Sample time of setpoint generator
 % Skewsine Reference Generator
-Reference.skewSine.tm    = 0.8;     % [s] Settle time
+Reference.skewSine.tm = 2 ;     % [s] Settle time
 
 %Transient reference generator
-Reference.transient.r = 1e5;
-Reference.transient.h = 5*ts;
+Reference.transient.r = 2.5e2;
+Reference.transient.h = 10*ts;
 
 %% TFlex plant
 s = tf('s');
-P = 1/(0.2*s^2 + 0.74*s + 11.46)       %Tflex
+%P = 1/(0.2*s^2 + 0.74*s + 15.46)
+P = 1/(0.15*s^2 + 0.5*s + 16.12)
 [Pnum,Pden] = tfdata(P,'v');
 
 %Write to struct
@@ -26,11 +27,11 @@ Plant.Pden = Pden;
 
 %% PID
 %Motor settings
-I_limit = 2000;    % [mA]   Current limit
+I_limit = 500;    % [mA]   Current limit
 gainMotor = 5.56;  % [Nm/A] Motor constant
 
 crossOver = 15*2*pi;     %[rad/s]
-m_eq  = 0.2;     % Equivalent mass
+m_eq  = 0.15;     % Equivalent mass
 alpha = 0.1;     % Phase lead
 beta  = 2;       % Integral action
 
@@ -57,8 +58,8 @@ Cpid_d = c2d(Cpid,ts,'tustin');                                 % Discrete
 %Transfer function (Plant, discrete)
 P_d  = c2d(Plant.P,ts);
 
-%{
 % Open loop stability
+%{
 Loopd  = loopsens(P_d,Cpid_d);
 figure(80063)
 set(gcf,'Color','White')
@@ -112,53 +113,81 @@ a1 = 3*omega_n^2;
 a2 = 3*omega_n;
 
 %Transfer function
-SVF   = 1/(s^3 + a2*s^2 + a1*s + a0);   % Continuous
-SVF_d = c2d(SVF,ts);                    % Discrete
-
-%Delay (at controller crossover)
-crossover = 35;
-[mag,phase,wout] = bode(SVF,crossover);
-svf_delay = -(phase)/(2*pi*wout);
-svf_delay = round(svf_delay/(ts*10));
-fprintf('\nDelay introduced by State Variable Filter (at crossover): %i timesteps\n',svf_delay)
-clear SVF SVF_d
+%SVF   = 1/(s^3 + a2*s^2 + a1*s + a0);   % Continuous
 
 %Write to struct
 SVF.natFreq = omega_n;
 SVF.a0 = a0;
 SVF.a1 = a1;
 SVF.a2 = a2;
-SVF.delay = svf_delay;
 
-%% Smith Predictor && Feed Forward
+%% RBD Feed Forward
 m_est = 0.2;
-%Estimated plant
-P_est   = 1/(m_est*s^2);        % Continuous
-P_est_d = c2d(P_est,ts);        % Discrete
-[P_estnum,P_estden] = tfdata(P_est_d,'v');
+d     = 0.74;
+k_est = 15.46;
 
 %Write to struct
-Smith.P_estnum = P_estnum;
-Smith.P_estden = P_estden;
+FF_RBD.m_est  = m_est;
+FF_RBD.d     = d;
+FF_RBD.k_est = k_est;
 
 %% Cogging 
-angle = linspace(-23,23,500);
-f = [10, 5, 20, 2.5, 1.25];  % Frequencies
-p = [0, 0, -5, 0, 2];        % Phase delay
-a = [40, -20, 30, 2, 0.1];   % Amplitude (relative)
-c    = sum( a'.*sin(((angle+p')*2*pi)./f'));
-[maxValue,index] = max(c);
-c    = a'.*sin(((angle(index)+p')*2*pi)./f');
-a = a./maxValue;              % Normalized amplitudes 
+angle = linspace(-0.4189,0.4189,500);   %[rad]
+f = [4*pi, 4*pi*8];     % Frequencies
+p = [pi/2.5, pi/2];     % Phase
+a = [20, 3]*0.9;        % Amplitude
+
+%Resultant cogging signal 
+angle = [angle',angle'];
+c     = sum( a.*sin(angle.*f + p),2);
+
+% Plot cogging signal
+%{
+figure(101),clf(101)
+hold on
+plot(angle,c)
+ylim([-40 40])
+%}
 
 %Write to struct
 Cogging.amplitude = a';
 Cogging.phase     = p';
 Cogging.frequency = f';
 
+%% Hysteresis (reset integrator)
+Hysteresis.gain  = 5;
+Hysteresis.p0    = 3.0367;
 
+%% Gravity
+l = 0.187/2;        %[m]     Length
+m = 1.46;           %[kg]    Mass
+g = 9.81;           %[m/s^2] Gravitational acceleration
+phase = -pi/20;     %[rad]   Phase
+gainMotor = 5.56;   %[Nm/A]  Motor constant
+
+rot = linspace(-0.1745*pi,0.1745*pi,501);
+F_g = l*m*g*sin(rot/(2*pi)+phase)./gainMotor*1000;
+
+%Write to struct
+gravity.l = l;
+gravity.m = m;
+gravity.g = g;
+gravity.motorGain = gainMotor;
+gravity.constant = 1000*m*g*l/gainMotor;
+gravity.phase = phase;
+
+%Plot gravity
+%{
+figure(1111)
+plot(rot,F_g)
+%}
+
+%% Clear workspace
+clear l m g phase gainMotor F_g rot
+clear d m_est k_est
 clear P Pnum Pden
-clear a p f c maxValue index angle
+clear a p f c index angle
 clear m_est P_est P_est_d P_estnum P_estden
 clear a0 a1 a2 omega_n crossover mag phase wout svf_delay 
 clear crossover m_eq alpha beta kp tau_z tau_i tau_p Kp Ki Kd LPnum LPden P_d Cpid Cpid_d LPnum LPden LP LP_d
+
